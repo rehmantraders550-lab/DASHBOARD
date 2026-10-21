@@ -55,7 +55,7 @@ export function deriveWorkflowState(
   selectedStageId: string
 ): DerivedWorkflowState {
   // 1. Derive Node States based on definition and virtual execution clock
-  const derivedStages: WorkflowStage[] = definition.nodes.map((node: StaticNodeDefinition, index: number) => {
+  const derivedStages: WorkflowStage[] = definition.nodes.map((node: StaticNodeDefinition) => {
     const plannedStart = node.plannedStart;
     const plannedEnd = node.plannedStart + node.expectedDuration;
 
@@ -81,11 +81,25 @@ export function deriveWorkflowState(
       progressPercent = 0;
     }
 
-    // Derive inputs: check if upstream node is completed
-    const upstreamCompleted = index === 0 || currentTimeSeconds >= definition.nodes[index - 1].plannedStart;
+    // Input readiness is dependency-truth based, never array-position based.
+    // A dependency is satisfied only after a STAGE_COMPLETE event has elapsed.
+    const completedStageIds = new Set(
+      definition.eventStream
+        .filter(
+          (evt: RuntimeEvent) =>
+            evt.type === 'STAGE_COMPLETE' &&
+            evt.stageId &&
+            evt.timestampOffset <= currentTimeSeconds
+        )
+        .map((evt: RuntimeEvent) => evt.stageId as string)
+    );
+    const dependenciesSatisfied = node.dependsOn.every((dependencyId) =>
+      completedStageIds.has(dependencyId)
+    );
+    const inputReady = node.dependsOn.length === 0 || dependenciesSatisfied;
     const input = {
       name: node.inputTemplate.name,
-      size: upstreamCompleted ? node.inputTemplate.size : 'Pending',
+      size: inputReady ? node.inputTemplate.size : 'Pending',
       type: node.inputTemplate.type,
     };
 
@@ -96,7 +110,11 @@ export function deriveWorkflowState(
           ? node.outputTemplate.name
           : status === 'running'
           ? node.outputTemplate.runningStatusText || 'Processing...'
-          : `Waiting for ${index > 0 ? definition.nodes[index - 1].name : 'input'} step...`,
+          : node.dependsOn.length > 0
+          ? `Waiting for ${node.dependsOn
+              .map((dependencyId) => definition.nodes.find((candidate) => candidate.id === dependencyId)?.name || dependencyId)
+              .join(', ')}...`
+          : 'Waiting for input...',
       isProcessing: status === 'running',
       name: status === 'completed' ? node.outputTemplate.name : undefined,
       size: status === 'completed' ? node.outputTemplate.size : undefined,
@@ -125,6 +143,7 @@ export function deriveWorkflowState(
       id: node.id,
       stepNumber: node.stepNumber,
       name: node.name,
+      visualType: node.visualType,
       status,
       duration,
       durationSeconds: status === 'completed' ? node.expectedDuration : Math.max(currentTimeSeconds - plannedStart, 0),
