@@ -36,7 +36,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
   };
 
   // State Derivation Layer: dynamically derive connector state from node execution states
-  const getConnectorState = (index: number): 'completed' | 'active-transitional' | 'waiting' => {
+  const getConnectorState = (index: number): DerivedPipe['state'] => {
     if (pipes && pipes[index]) {
       return pipes[index].state;
     }
