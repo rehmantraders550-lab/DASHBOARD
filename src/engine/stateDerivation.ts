@@ -55,6 +55,18 @@ export function deriveWorkflowState(
   selectedStageId: string
 ): DerivedWorkflowState {
   // 1. Derive Node States based on definition and virtual execution clock
+  // Completion truth comes from elapsed runtime events, not planned timestamps.
+  const completedStageIds = new Set(
+    definition.eventStream
+      .filter(
+        (evt: RuntimeEvent) =>
+          evt.type === 'STAGE_COMPLETE' &&
+          evt.stageId &&
+          evt.timestampOffset <= currentTimeSeconds
+      )
+      .map((evt: RuntimeEvent) => evt.stageId as string)
+  );
+
   const derivedStages: WorkflowStage[] = definition.nodes.map((node: StaticNodeDefinition) => {
     const plannedStart = node.plannedStart;
     const plannedEnd = node.plannedStart + node.expectedDuration;
@@ -63,11 +75,17 @@ export function deriveWorkflowState(
     let duration = 'Waiting';
     let progressPercent = 0;
 
-    if (currentTimeSeconds >= plannedEnd) {
+    const dependenciesSatisfied = node.dependsOn.every((dependencyId) =>
+      completedStageIds.has(dependencyId)
+    );
+    const inputReady = node.dependsOn.length === 0 || dependenciesSatisfied;
+    const nodeCompleted = completedStageIds.has(node.id);
+
+    if (nodeCompleted) {
       status = 'completed';
       duration = `${node.expectedDuration.toFixed(1)}s`;
       progressPercent = 100;
-    } else if (currentTimeSeconds >= plannedStart && currentTimeSeconds < plannedEnd) {
+    } else if (inputReady && currentTimeSeconds >= plannedStart && currentTimeSeconds < plannedEnd) {
       status = 'running';
       const elapsed = Math.max(currentTimeSeconds - plannedStart, 0.1);
       duration = `${elapsed.toFixed(1)}s`;
@@ -82,21 +100,6 @@ export function deriveWorkflowState(
     }
 
     // Input readiness is dependency-truth based, never array-position based.
-    // A dependency is satisfied only after a STAGE_COMPLETE event has elapsed.
-    const completedStageIds = new Set(
-      definition.eventStream
-        .filter(
-          (evt: RuntimeEvent) =>
-            evt.type === 'STAGE_COMPLETE' &&
-            evt.stageId &&
-            evt.timestampOffset <= currentTimeSeconds
-        )
-        .map((evt: RuntimeEvent) => evt.stageId as string)
-    );
-    const dependenciesSatisfied = node.dependsOn.every((dependencyId) =>
-      completedStageIds.has(dependencyId)
-    );
-    const inputReady = node.dependsOn.length === 0 || dependenciesSatisfied;
     const input = {
       name: node.inputTemplate.name,
       size: inputReady ? node.inputTemplate.size : 'Pending',
