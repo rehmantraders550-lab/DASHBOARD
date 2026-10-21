@@ -31,6 +31,8 @@ export const WorkflowCard: React.FC<WorkflowCardProps> = ({
   const isRunning = stage.status === 'running';
   const isCompleted = stage.status === 'completed';
   const isWaiting = stage.status === 'waiting';
+  const isResilience = ['failed', 'retrying', 'blocked', 'fallback'].includes(stage.status);
+  const isRecovered = stage.status === 'recovered';
 
   const renderIcon = () => {
     const iconClass = "w-8 h-8 text-[#242628] stroke-[1.6]";
@@ -79,6 +81,10 @@ export const WorkflowCard: React.FC<WorkflowCardProps> = ({
       className={`relative select-none cursor-pointer w-36 sm:w-40 md:w-44 h-48 sm:h-52 rounded-2xl p-5 flex flex-col justify-between transition-all duration-200 focus:outline-hidden ${
         isSelected
           ? 'bg-[#FFF8F3] border-2 border-[#F97316] shadow-[0_4px_24px_rgba(249,115,22,0.18)] scale-[1.02] z-10'
+          : isResilience
+          ? 'bg-[#FFFBEB] border-2 border-[#B45309] shadow-xs'
+          : isRecovered
+          ? 'bg-[#F0FDF4] border border-[#16A34A] shadow-xs'
           : 'bg-white border border-[#E5E1DA] hover:border-[#D1CDC7] shadow-xs hover:shadow-md hover:-translate-y-0.5'
       }`}
     >
@@ -118,6 +124,12 @@ export const WorkflowCard: React.FC<WorkflowCardProps> = ({
           </div>
         )}
 
+        {isResilience && (
+          <><div className="w-3.5 h-3.5 rounded-full bg-[#B45309] shrink-0" /><span className="text-[#92400E] font-semibold capitalize">{stage.status}</span></>
+        )}
+        {isRecovered && (
+          <><div className="w-4 h-4 rounded-full bg-[#16A34A] flex items-center justify-center text-white"><Check className="w-2.5 h-2.5" /></div><span className="text-[#166534] font-semibold">Recovered</span></>
+        )}
         {isWaiting && (
           <>
             <div className="w-3.5 h-3.5 rounded-full border border-[#A8A29E] shrink-0" />
