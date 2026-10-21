@@ -13,6 +13,7 @@ export interface RuntimeSnapshot {
   isRunning: boolean;
   events: RuntimeEvent[];
   telemetry?: RuntimeTelemetry;
+  injectedEvents?: RuntimeEvent[];
 }
 
 export interface RuntimeEventSource {
