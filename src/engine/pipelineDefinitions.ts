@@ -40,7 +40,7 @@ export default definePipeline('Artwork to Vector', {
       {
         id: 'intake',
         stepNumber: '01',
-        name: 'Intake',
+        name: 'Intake', visualType: 'intake',
         description: 'Ingests raw raster assets, extracts metadata, and normalizes DPI and color profile.',
         plannedStart: 0.1,
         expectedDuration: 0.3,
@@ -66,7 +66,7 @@ export default definePipeline('Artwork to Vector', {
       {
         id: 'analyze',
         stepNumber: '02',
-        name: 'Analyze',
+        name: 'Analyze', visualType: 'analysis',
         description: 'Executes edge detection, segmentation, palette extraction, and path boundary prediction.',
         plannedStart: 0.4,
         expectedDuration: 0.7,
@@ -92,7 +92,7 @@ export default definePipeline('Artwork to Vector', {
       {
         id: 'vectorize',
         stepNumber: '03',
-        name: 'Vectorize',
+        name: 'Vectorize', visualType: 'vectorize',
         description: 'Reconstructs clean vector paths from the analyzed artwork.',
         plannedStart: 0.8,
         expectedDuration: 1.4, // Running from 0.8 to 2.2, at 1.4s it is running (duration: 1.4s displayed)
@@ -119,7 +119,7 @@ export default definePipeline('Artwork to Vector', {
       {
         id: 'validate',
         stepNumber: '04',
-        name: 'Validate',
+        name: 'Validate', visualType: 'validation',
         description: 'Verifies node continuity, self-intersecting loops, and SVG 1.1 / 2.0 standard conformance.',
         plannedStart: 2.2,
         expectedDuration: 0.8,
@@ -145,7 +145,7 @@ export default definePipeline('Artwork to Vector', {
       {
         id: 'export',
         stepNumber: '05',
-        name: 'Export',
+        name: 'Export', visualType: 'export',
         description: 'Compiles clean vector deliverables in SVG, EPS, and high-fidelity PDF formats.',
         plannedStart: 3.0,
         expectedDuration: 1.5,
@@ -206,7 +206,7 @@ export default definePipeline('Artwork to Vector', {
       {
         id: 'color-intake',
         stepNumber: '01',
-        name: 'Intake',
+        name: 'Intake', visualType: 'intake',
         description: 'Read input imagery and calibrate color gamut profile.',
         plannedStart: 0.1,
         expectedDuration: 0.2,
@@ -220,7 +220,7 @@ export default definePipeline('Artwork to Vector', {
       {
         id: 'color-k-means',
         stepNumber: '02',
-        name: 'K-Means',
+        name: 'K-Means', visualType: 'analysis',
         description: 'Run accelerated K-Means clustering across 16 color centroids.',
         plannedStart: 0.3,
         expectedDuration: 0.7,
@@ -234,7 +234,7 @@ export default definePipeline('Artwork to Vector', {
       {
         id: 'color-export',
         stepNumber: '03',
-        name: 'Export',
+        name: 'Export', visualType: 'export',
         description: 'Generates ASE, CSS, and Pantone match swatches.',
         plannedStart: 1.0,
         expectedDuration: 0.2,
@@ -252,7 +252,7 @@ export default definePipeline('Artwork to Vector', {
       { id: 'c3', timestampOffset: 0.3, wallClockTime: '14:18:02', type: 'STAGE_START', stageId: 'color-k-means', level: 'INFO', message: '16 dominant centroids clustered' },
       { id: 'c4', timestampOffset: 1.0, wallClockTime: '14:18:03', type: 'STAGE_COMPLETE', stageId: 'color-export', level: 'SUCCESS', message: 'Color palette ready for export' },
     ],
-  },,
+  },
   {
     id: 'batch-processing', name: 'Batch Processing', category: 'Bulk Pipeline',
     description: 'Concurrent processing of asset packages across distributed worker nodes.',
@@ -260,9 +260,9 @@ export default definePipeline('Artwork to Vector', {
     codeDefinition: `// Batch Processing Pipeline
 definePipeline('Batch Processing').step('01_intake', unpackArchive).step('02_fanout', fanoutWorkers).step('03_bundle', createBundle);`,
     nodes: [
-      { id: 'batch-intake', stepNumber: '01', name: 'Intake', description: 'Intake stage for the batch workflow.', plannedStart: 0.1, expectedDuration: 0.4, dependsOn: [], inputTemplate: { name: 'assets_archive.zip', size: 'Runtime' }, outputTemplate: { name: 'manifest.json', size: 'Runtime', runningStatusText: 'Processing intake...' }, dependencies: [{ name: 'unzip-stream', status: 'Available' }], baseCpuProfile: { runningBase: 45, runningVariance: 10, idleBase: 5 }, baseMemProfile: { runningBase: 28, runningVariance: 5, idleBase: 12 } },
-      { id: 'batch-fanout', stepNumber: '02', name: 'Fanout', description: 'Fanout stage for the batch workflow.', plannedStart: 0.5, expectedDuration: 2.7, dependsOn: ['batch-intake'], inputTemplate: { name: 'manifest.json', size: 'Runtime' }, outputTemplate: { name: 'vector_bundle', size: 'Runtime', runningStatusText: 'Processing fanout...' }, dependencies: [{ name: 'WorkerPool', status: 'Available' }], baseCpuProfile: { runningBase: 82, runningVariance: 10, idleBase: 5 }, baseMemProfile: { runningBase: 58, runningVariance: 5, idleBase: 12 } },
-      { id: 'batch-bundle', stepNumber: '03', name: 'Bundle', description: 'Bundle stage for the batch workflow.', plannedStart: 3.2, expectedDuration: 1, dependsOn: ['batch-fanout'], inputTemplate: { name: 'vector_bundle', size: 'Runtime' }, outputTemplate: { name: 'release_bundle.tar.gz', size: 'Runtime', runningStatusText: 'Processing bundle...' }, dependencies: [{ name: 'ZipArchiver', status: 'Available' }], baseCpuProfile: { runningBase: 45, runningVariance: 10, idleBase: 5 }, baseMemProfile: { runningBase: 28, runningVariance: 5, idleBase: 12 } }
+      { id: 'batch-intake', stepNumber: '01', name: 'Intake', visualType: 'intake', description: 'Intake stage for the batch workflow.', plannedStart: 0.1, expectedDuration: 0.4, dependsOn: [], inputTemplate: { name: 'assets_archive.zip', size: 'Runtime' }, outputTemplate: { name: 'manifest.json', size: 'Runtime', runningStatusText: 'Processing intake...' }, dependencies: [{ name: 'unzip-stream', status: 'Available' }], baseCpuProfile: { runningBase: 45, runningVariance: 10, idleBase: 5 }, baseMemProfile: { runningBase: 28, runningVariance: 5, idleBase: 12 } },
+      { id: 'batch-fanout', stepNumber: '02', name: 'Fanout', visualType: 'fanout', description: 'Fanout stage for the batch workflow.', plannedStart: 0.5, expectedDuration: 2.7, dependsOn: ['batch-intake'], inputTemplate: { name: 'manifest.json', size: 'Runtime' }, outputTemplate: { name: 'vector_bundle', size: 'Runtime', runningStatusText: 'Processing fanout...' }, dependencies: [{ name: 'WorkerPool', status: 'Available' }], baseCpuProfile: { runningBase: 82, runningVariance: 10, idleBase: 5 }, baseMemProfile: { runningBase: 58, runningVariance: 5, idleBase: 12 } },
+      { id: 'batch-bundle', stepNumber: '03', name: 'Bundle', visualType: 'bundle', description: 'Bundle stage for the batch workflow.', plannedStart: 3.2, expectedDuration: 1, dependsOn: ['batch-fanout'], inputTemplate: { name: 'vector_bundle', size: 'Runtime' }, outputTemplate: { name: 'release_bundle.tar.gz', size: 'Runtime', runningStatusText: 'Processing bundle...' }, dependencies: [{ name: 'ZipArchiver', status: 'Available' }], baseCpuProfile: { runningBase: 45, runningVariance: 10, idleBase: 5 }, baseMemProfile: { runningBase: 28, runningVariance: 5, idleBase: 12 } }
     ],
     eventStream: [
       { id: 'b1', timestampOffset: 0.05, wallClockTime: '14:10:00', type: 'PIPELINE_INIT', level: 'INFO', message: 'Batch run initialized' },
@@ -281,8 +281,8 @@ definePipeline('Batch Processing').step('01_intake', unpackArchive).step('02_fan
     codeDefinition: `// QA Validation Pipeline
 definePipeline('QA Validation').step('01_render', renderScales).step('02_diff', computeSSIM);`,
     nodes: [
-      { id: 'qa-render', stepNumber: '01', name: 'Render', description: 'Render stage for the qa workflow.', plannedStart: 0.1, expectedDuration: 0.5, dependsOn: [], inputTemplate: { name: 'master.svg', size: 'Runtime' }, outputTemplate: { name: 'diff_renders.tar', size: 'Runtime', runningStatusText: 'Processing render...' }, dependencies: [{ name: 'resvg', status: 'Available' }], baseCpuProfile: { runningBase: 62, runningVariance: 10, idleBase: 5 }, baseMemProfile: { runningBase: 34, runningVariance: 5, idleBase: 12 } },
-      { id: 'qa-diff', stepNumber: '02', name: 'Diff Score', description: 'Diff Score stage for the qa workflow.', plannedStart: 0.6, expectedDuration: 1.2, dependsOn: ['qa-render'], inputTemplate: { name: 'diff_renders.tar', size: 'Runtime' }, outputTemplate: { name: 'report.json', size: 'Runtime', runningStatusText: 'Processing diff score...' }, dependencies: [{ name: 'pixelmatch', status: 'Available' }], baseCpuProfile: { runningBase: 70, runningVariance: 10, idleBase: 5 }, baseMemProfile: { runningBase: 40, runningVariance: 5, idleBase: 12 } }
+      { id: 'qa-render', stepNumber: '01', name: 'Render', visualType: 'render', description: 'Render stage for the qa workflow.', plannedStart: 0.1, expectedDuration: 0.5, dependsOn: [], inputTemplate: { name: 'master.svg', size: 'Runtime' }, outputTemplate: { name: 'diff_renders.tar', size: 'Runtime', runningStatusText: 'Processing render...' }, dependencies: [{ name: 'resvg', status: 'Available' }], baseCpuProfile: { runningBase: 62, runningVariance: 10, idleBase: 5 }, baseMemProfile: { runningBase: 34, runningVariance: 5, idleBase: 12 } },
+      { id: 'qa-diff', stepNumber: '02', name: 'Diff Score', visualType: 'comparison', description: 'Diff Score stage for the qa workflow.', plannedStart: 0.6, expectedDuration: 1.2, dependsOn: ['qa-render'], inputTemplate: { name: 'diff_renders.tar', size: 'Runtime' }, outputTemplate: { name: 'report.json', size: 'Runtime', runningStatusText: 'Processing diff score...' }, dependencies: [{ name: 'pixelmatch', status: 'Available' }], baseCpuProfile: { runningBase: 70, runningVariance: 10, idleBase: 5 }, baseMemProfile: { runningBase: 40, runningVariance: 5, idleBase: 12 } }
     ],
     eventStream: [
       { id: 'q1', timestampOffset: 0.05, wallClockTime: '14:05:00', type: 'PIPELINE_INIT', level: 'INFO', message: 'QA test suite started' },
@@ -299,8 +299,8 @@ definePipeline('QA Validation').step('01_render', renderScales).step('02_diff', 
     codeDefinition: `// Export Pipeline
 definePipeline('Export').step('01_sign', signPayload).step('02_publish', syncEdgeCDN);`,
     nodes: [
-      { id: 'exp-sign', stepNumber: '01', name: 'Cryptographic Sign', description: 'Cryptographic Sign stage for the exp workflow.', plannedStart: 0.1, expectedDuration: 0.4, dependsOn: [], inputTemplate: { name: 'package.tar.gz', size: 'Runtime' }, outputTemplate: { name: 'checksums.txt', size: 'Runtime', runningStatusText: 'Processing cryptographic sign...' }, dependencies: [{ name: 'OpenSSL', status: 'Available' }], baseCpuProfile: { runningBase: 30, runningVariance: 10, idleBase: 5 }, baseMemProfile: { runningBase: 18, runningVariance: 5, idleBase: 12 } },
-      { id: 'exp-publish', stepNumber: '02', name: 'CDN Sync', description: 'CDN Sync stage for the exp workflow.', plannedStart: 0.5, expectedDuration: 0.6, dependsOn: ['exp-sign'], inputTemplate: { name: 'package.tar.gz', size: 'Runtime' }, outputTemplate: { name: 'release_urls.json', size: 'Runtime', runningStatusText: 'Processing cdn sync...' }, dependencies: [{ name: 'Cloudflare-Worker-API', status: 'Available' }], baseCpuProfile: { runningBase: 28, runningVariance: 10, idleBase: 5 }, baseMemProfile: { runningBase: 20, runningVariance: 5, idleBase: 12 } }
+      { id: 'exp-sign', stepNumber: '01', name: 'Cryptographic Sign', visualType: 'sign', description: 'Cryptographic Sign stage for the exp workflow.', plannedStart: 0.1, expectedDuration: 0.4, dependsOn: [], inputTemplate: { name: 'package.tar.gz', size: 'Runtime' }, outputTemplate: { name: 'checksums.txt', size: 'Runtime', runningStatusText: 'Processing cryptographic sign...' }, dependencies: [{ name: 'OpenSSL', status: 'Available' }], baseCpuProfile: { runningBase: 30, runningVariance: 10, idleBase: 5 }, baseMemProfile: { runningBase: 18, runningVariance: 5, idleBase: 12 } },
+      { id: 'exp-publish', stepNumber: '02', name: 'CDN Sync', visualType: 'publish', description: 'CDN Sync stage for the exp workflow.', plannedStart: 0.5, expectedDuration: 0.6, dependsOn: ['exp-sign'], inputTemplate: { name: 'package.tar.gz', size: 'Runtime' }, outputTemplate: { name: 'release_urls.json', size: 'Runtime', runningStatusText: 'Processing cdn sync...' }, dependencies: [{ name: 'Cloudflare-Worker-API', status: 'Available' }], baseCpuProfile: { runningBase: 28, runningVariance: 10, idleBase: 5 }, baseMemProfile: { runningBase: 20, runningVariance: 5, idleBase: 12 } }
     ],
     eventStream: [
       { id: 'x1', timestampOffset: 0.05, wallClockTime: '13:58:00', type: 'PIPELINE_INIT', level: 'INFO', message: 'Export job initiated' },
