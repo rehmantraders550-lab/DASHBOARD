@@ -12,7 +12,7 @@ import {
   WorkflowDefinition,
 } from '../types/workflow';
 
-export type PipeVisualState = 'completed' | 'active-transitional' | 'waiting';
+export type PipeVisualState = 'completed' | 'active-transitional' | 'waiting' | 'attention';
 
 export interface DerivedPipe {
   id: string;
