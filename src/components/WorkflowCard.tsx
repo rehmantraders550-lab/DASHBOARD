@@ -4,7 +4,14 @@ import {
   Search,
   ShieldCheck,
   Upload,
-  Check
+  Check,
+  GitBranch,
+  Package,
+  Image,
+  ScanSearch,
+  KeyRound,
+  CloudUpload,
+  CircleDot
 } from 'lucide-react';
 import { WorkflowStage } from '../types/workflow';
 
@@ -26,49 +33,35 @@ export const WorkflowCard: React.FC<WorkflowCardProps> = ({
   const isWaiting = stage.status === 'waiting';
 
   const renderIcon = () => {
-    switch (stage.stepNumber) {
-      case '01':
-        return <FileText className="w-8 h-8 text-[#242628] stroke-[1.6]" />;
-      case '02':
-        return <Search className="w-8 h-8 text-[#242628] stroke-[1.6]" />;
-      case '03':
-        // Vectorize progress ring
-        return (
-          <div className="relative w-10 h-10 flex items-center justify-center">
-            <svg
-              className={`w-10 h-10 ${isRunning && isRunningWorkflow ? 'animate-spin' : ''}`}
-              viewBox="0 0 40 40"
-              style={{ animationDuration: '3s' }}
-            >
-              {/* Background ring */}
-              <circle
-                cx="20"
-                cy="20"
-                r="16"
-                stroke="#F0ECE4"
-                strokeWidth="3.5"
-                fill="none"
-              />
-              {/* Active orange arc */}
-              <circle
-                cx="20"
-                cy="20"
-                r="16"
-                stroke="#F97316"
-                strokeWidth="3.5"
-                strokeLinecap="round"
-                strokeDasharray="100.5"
-                strokeDashoffset="40"
-                fill="none"
-              />
-            </svg>
-          </div>
-        );
-      case '04':
-        return <ShieldCheck className="w-8 h-8 text-[#242628] stroke-[1.6]" />;
-      case '05':
-      default:
-        return <Upload className="w-8 h-8 text-[#242628] stroke-[1.6]" />;
+    const iconClass = "w-8 h-8 text-[#242628] stroke-[1.6]";
+
+    if (stage.visualType === 'vectorize') {
+      return (
+        <div className="relative w-10 h-10 flex items-center justify-center" aria-label="Vectorization stage">
+          <svg
+            className={`w-10 h-10 ${isRunning && isRunningWorkflow ? 'animate-spin' : ''}`}
+            viewBox="0 0 40 40"
+            style={{ animationDuration: '3s' }}
+          >
+            <circle cx="20" cy="20" r="16" stroke="#F0ECE4" strokeWidth="3.5" fill="none" />
+            <circle cx="20" cy="20" r="16" stroke="#F97316" strokeWidth="3.5" strokeLinecap="round" strokeDasharray="100.5" strokeDashoffset="40" fill="none" />
+          </svg>
+        </div>
+      );
+    }
+
+    switch (stage.visualType) {
+      case 'intake': return <FileText className={iconClass} />;
+      case 'analysis': return <Search className={iconClass} />;
+      case 'validation': return <ShieldCheck className={iconClass} />;
+      case 'export': return <Upload className={iconClass} />;
+      case 'fanout': return <GitBranch className={iconClass} />;
+      case 'bundle': return <Package className={iconClass} />;
+      case 'render': return <Image className={iconClass} />;
+      case 'comparison': return <ScanSearch className={iconClass} />;
+      case 'sign': return <KeyRound className={iconClass} />;
+      case 'publish': return <CloudUpload className={iconClass} />;
+      default: return <CircleDot className={iconClass} />;
     }
   };
 
