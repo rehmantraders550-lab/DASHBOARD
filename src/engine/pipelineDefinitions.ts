@@ -248,9 +248,12 @@ export default definePipeline('Artwork to Vector', {
     ],
     eventStream: [
       { id: 'c1', timestampOffset: 0.05, wallClockTime: '14:18:00', type: 'PIPELINE_INIT', level: 'INFO', message: 'Color Analysis pipeline started' },
-      { id: 'c2', timestampOffset: 0.1, wallClockTime: '14:18:01', type: 'STAGE_START', stageId: 'color-intake', level: 'INFO', message: 'Color gamut normalized' },
-      { id: 'c3', timestampOffset: 0.3, wallClockTime: '14:18:02', type: 'STAGE_START', stageId: 'color-k-means', level: 'INFO', message: '16 dominant centroids clustered' },
-      { id: 'c4', timestampOffset: 1.0, wallClockTime: '14:18:03', type: 'STAGE_COMPLETE', stageId: 'color-export', level: 'SUCCESS', message: 'Color palette ready for export' },
+      { id: 'c2', timestampOffset: 0.1, wallClockTime: '14:18:01', type: 'STAGE_START', stageId: 'color-intake', level: 'INFO', message: 'Color gamut normalization started' },
+      { id: 'c3', timestampOffset: 0.3, wallClockTime: '14:18:01', type: 'STAGE_COMPLETE', stageId: 'color-intake', level: 'SUCCESS', message: 'Color gamut normalized' },
+      { id: 'c4', timestampOffset: 0.3, wallClockTime: '14:18:02', type: 'STAGE_START', stageId: 'color-k-means', level: 'INFO', message: '16-centroid clustering started' },
+      { id: 'c5', timestampOffset: 1.0, wallClockTime: '14:18:02', type: 'STAGE_COMPLETE', stageId: 'color-k-means', level: 'SUCCESS', message: '16 dominant centroids clustered' },
+      { id: 'c6', timestampOffset: 1.0, wallClockTime: '14:18:03', type: 'STAGE_START', stageId: 'color-export', level: 'INFO', message: 'Palette export started' },
+      { id: 'c7', timestampOffset: 1.2, wallClockTime: '14:18:03', type: 'STAGE_COMPLETE', stageId: 'color-export', level: 'SUCCESS', message: 'Color palette ready for export' },
     ],
   },
   {
