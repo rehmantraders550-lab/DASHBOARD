@@ -1,10 +1,13 @@
-import { StageDependency, StageEvent } from '../types/workflow';
+import { StageDependency } from '../types/workflow';
+
+export type NodeVisualType = 'intake' | 'analysis' | 'vectorize' | 'validation' | 'export' | 'fanout' | 'bundle' | 'render' | 'comparison' | 'sign' | 'publish' | 'generic';
 
 // Static declaration of a pipeline node in the DAG
 export interface StaticNodeDefinition {
   id: string;
   stepNumber: string; // e.g. "01"
   name: string; // e.g. "Intake"
+  visualType: NodeVisualType;
   description: string;
   plannedStart: number; // in seconds on virtual timeline
   expectedDuration: number; // in seconds
