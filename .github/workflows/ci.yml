@@ -22,10 +22,11 @@ jobs:
         with:
           node-version: 22
 
-      # package.json was cleaned before the lockfiles could be regenerated locally.
-      # Avoid treating the stale lockfile as authoritative until it is synchronized.
       - name: Install dependencies
-        run: npm install --package-lock=false --ignore-scripts
+        run: npm install --ignore-scripts
+
+      - name: Verify dependency manifest
+        run: git diff --exit-code -- package-lock.json
 
       - name: Type check
         run: npm run lint
