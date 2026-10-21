@@ -1,6 +1,4 @@
-import { StageDependency } from '../types/workflow';
-
-export type NodeVisualType = 'intake' | 'analysis' | 'vectorize' | 'validation' | 'export' | 'fanout' | 'bundle' | 'render' | 'comparison' | 'sign' | 'publish' | 'generic';
+import { StageDependency, NodeVisualType } from '../types/workflow';
 
 // Static declaration of a pipeline node in the DAG
 export interface StaticNodeDefinition {
