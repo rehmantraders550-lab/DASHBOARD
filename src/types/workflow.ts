@@ -1,4 +1,4 @@
-import type { NodeVisualType } from '../engine/workflowModel';
+export type NodeVisualType = 'intake' | 'analysis' | 'vectorize' | 'validation' | 'export' | 'fanout' | 'bundle' | 'render' | 'comparison' | 'sign' | 'publish' | 'generic';
 
 export type StageStatus = 'completed' | 'running' | 'waiting' | 'failed';
 
