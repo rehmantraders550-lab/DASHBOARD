@@ -255,7 +255,7 @@ export default definePipeline('Artwork to Vector', {
       { id: 'c6', timestampOffset: 1.0, wallClockTime: '14:18:03', type: 'STAGE_START', stageId: 'color-export', level: 'INFO', message: 'Palette export started' },
       { id: 'c7', timestampOffset: 1.2, wallClockTime: '14:18:03', type: 'STAGE_COMPLETE', stageId: 'color-export', level: 'SUCCESS', message: 'Color palette ready for export' },
     ],
-  },,
+  },
   {
     id: 'batch-processing',
     name: 'Batch Processing',
@@ -272,7 +272,7 @@ export default definePipeline('Batch Processing')
   .step('03_bundle', async (ctx, outputs) => createTarball(outputs));`,
     nodes: [
       {
-        id: 'batch-intake', stepNumber: '01', name: 'Intake',
+        id: 'batch-intake', visualType: 'intake', stepNumber: '01', name: 'Intake',
         description: 'Unpack zip bundle and register manifest items.',
         plannedStart: 0.1, expectedDuration: 0.4, dependsOn: [],
         inputTemplate: { name: 'assets_archive.zip', size: '148 MB', type: 'application/zip' },
@@ -282,7 +282,7 @@ export default definePipeline('Batch Processing')
         baseMemProfile: { runningBase: 30, runningVariance: 6, idleBase: 12 },
       },
       {
-        id: 'batch-fanout', stepNumber: '02', name: 'Fanout',
+        id: 'batch-fanout', visualType: 'fanout', stepNumber: '02', name: 'Fanout',
         description: 'Distributes vectorization jobs across worker pool.',
         plannedStart: 0.5, expectedDuration: 2.7, dependsOn: ['batch-intake'],
         inputTemplate: { name: 'manifest.json', size: '84 KB', type: 'application/json' },
@@ -292,7 +292,7 @@ export default definePipeline('Batch Processing')
         baseMemProfile: { runningBase: 52, runningVariance: 8, idleBase: 20 },
       },
       {
-        id: 'batch-bundle', stepNumber: '03', name: 'Bundle',
+        id: 'batch-bundle', visualType: 'bundle', stepNumber: '03', name: 'Bundle',
         description: 'Gathers all artifacts into target release archive.',
         plannedStart: 3.2, expectedDuration: 1.0, dependsOn: ['batch-fanout'],
         inputTemplate: { name: 'vector_bundle', size: 'Pending', type: 'application/octet-stream' },
@@ -328,7 +328,7 @@ export default definePipeline('QA Validation')
   .step('02_diff', async (ctx, renders) => computeSSIM(renders, ctx.groundTruth));`,
     nodes: [
       {
-        id: 'qa-render', stepNumber: '01', name: 'Render',
+        id: 'qa-render', visualType: 'render', stepNumber: '01', name: 'Render',
         description: 'Rasterize vector SVG at 1x, 2x, 4x resolutions.',
         plannedStart: 0.1, expectedDuration: 0.5, dependsOn: [],
         inputTemplate: { name: 'master.svg', size: '820 KB', type: 'image/svg+xml' },
@@ -338,7 +338,7 @@ export default definePipeline('QA Validation')
         baseMemProfile: { runningBase: 34, runningVariance: 6, idleBase: 14 },
       },
       {
-        id: 'qa-diff', stepNumber: '02', name: 'Diff Score',
+        id: 'qa-diff', visualType: 'comparison', stepNumber: '02', name: 'Diff Score',
         description: 'Compute pixel-by-pixel SSIM diff index vs master artwork.',
         plannedStart: 0.6, expectedDuration: 1.2, dependsOn: ['qa-render'],
         inputTemplate: { name: 'diff_renders.tar', size: '8.4 MB', type: 'application/x-tar' },
@@ -371,7 +371,7 @@ export default definePipeline('Export')
   .step('02_publish', async (ctx, signed) => syncEdgeCDN(signed));`,
     nodes: [
       {
-        id: 'exp-sign', stepNumber: '01', name: 'Cryptographic Sign',
+        id: 'exp-sign', visualType: 'sign', stepNumber: '01', name: 'Cryptographic Sign',
         description: 'Generates SHA-256 integrity checksums and cryptographic manifest.',
         plannedStart: 0.1, expectedDuration: 0.4, dependsOn: [],
         inputTemplate: { name: 'package.tar.gz', size: '3.4 MB', type: 'application/gzip' },
@@ -381,7 +381,7 @@ export default definePipeline('Export')
         baseMemProfile: { runningBase: 18, runningVariance: 3, idleBase: 8 },
       },
       {
-        id: 'exp-publish', stepNumber: '02', name: 'CDN Sync',
+        id: 'exp-publish', visualType: 'publish', stepNumber: '02', name: 'CDN Sync',
         description: 'Syncs build artifacts to global edge cache buckets.',
         plannedStart: 0.5, expectedDuration: 0.6, dependsOn: ['exp-sign'],
         inputTemplate: { name: 'package.tar.gz', size: '3.4 MB', type: 'application/gzip' },
