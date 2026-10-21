@@ -222,17 +222,13 @@ export function deriveWorkflowState(
   const activeStage =
     derivedStages.find((s) => s.id === selectedStageId) || derivedStages[0];
 
-  // 4. Derive Dynamic Telemetry based on active nodes
-  const runningNodes = derivedStages.filter((s) => s.status === 'running');
-  const baseMem = 18.2;
-  const runningMem = runningNodes.length * 24.4;
-  const activeMemoryMb = Number((baseMem + runningMem + (Math.sin(currentTimeSeconds * 2) * 2)).toFixed(1));
-
+  // 4. Telemetry is supplied by the runtime source.
+  // State derivation does not fabricate measurements.
   const telemetry: RuntimeTelemetry = runtime.telemetry || {
-    workerThreads: runningNodes.length > 0 ? 4 : 1,
-    activeMemoryMb,
-    peakMemoryLimitMb: 512,
-    cacheHitRatio: 89.4,
+    workerThreads: 0,
+    activeMemoryMb: 0,
+    peakMemoryLimitMb: 0,
+    cacheHitRatio: 0,
     bufferDropCount: 0,
   };
 
