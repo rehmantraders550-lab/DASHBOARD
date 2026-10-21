@@ -252,5 +252,62 @@ export default definePipeline('Artwork to Vector', {
       { id: 'c3', timestampOffset: 0.3, wallClockTime: '14:18:02', type: 'STAGE_START', stageId: 'color-k-means', level: 'INFO', message: '16 dominant centroids clustered' },
       { id: 'c4', timestampOffset: 1.0, wallClockTime: '14:18:03', type: 'STAGE_COMPLETE', stageId: 'color-export', level: 'SUCCESS', message: 'Color palette ready for export' },
     ],
+  },,
+  {
+    id: 'batch-processing', name: 'Batch Processing', category: 'Bulk Pipeline',
+    description: 'Concurrent processing of asset packages across distributed worker nodes.',
+    defaultTimeSeconds: 2.1, maxTimelineSeconds: 6.0,
+    codeDefinition: `// Batch Processing Pipeline
+definePipeline('Batch Processing').step('01_intake', unpackArchive).step('02_fanout', fanoutWorkers).step('03_bundle', createBundle);`,
+    nodes: [
+      { id: 'batch-intake', stepNumber: '01', name: 'Intake', description: 'Intake stage for the batch workflow.', plannedStart: 0.1, expectedDuration: 0.4, dependsOn: [], inputTemplate: { name: 'assets_archive.zip', size: 'Runtime' }, outputTemplate: { name: 'manifest.json', size: 'Runtime', runningStatusText: 'Processing intake...' }, dependencies: [{ name: 'unzip-stream', status: 'Available' }], baseCpuProfile: { runningBase: 45, runningVariance: 10, idleBase: 5 }, baseMemProfile: { runningBase: 28, runningVariance: 5, idleBase: 12 } },
+      { id: 'batch-fanout', stepNumber: '02', name: 'Fanout', description: 'Fanout stage for the batch workflow.', plannedStart: 0.5, expectedDuration: 2.7, dependsOn: ['batch-intake'], inputTemplate: { name: 'manifest.json', size: 'Runtime' }, outputTemplate: { name: 'vector_bundle', size: 'Runtime', runningStatusText: 'Processing fanout...' }, dependencies: [{ name: 'WorkerPool', status: 'Available' }], baseCpuProfile: { runningBase: 82, runningVariance: 10, idleBase: 5 }, baseMemProfile: { runningBase: 58, runningVariance: 5, idleBase: 12 } },
+      { id: 'batch-bundle', stepNumber: '03', name: 'Bundle', description: 'Bundle stage for the batch workflow.', plannedStart: 3.2, expectedDuration: 1, dependsOn: ['batch-fanout'], inputTemplate: { name: 'vector_bundle', size: 'Runtime' }, outputTemplate: { name: 'release_bundle.tar.gz', size: 'Runtime', runningStatusText: 'Processing bundle...' }, dependencies: [{ name: 'ZipArchiver', status: 'Available' }], baseCpuProfile: { runningBase: 45, runningVariance: 10, idleBase: 5 }, baseMemProfile: { runningBase: 28, runningVariance: 5, idleBase: 12 } }
+    ],
+    eventStream: [
+      { id: 'b1', timestampOffset: 0.05, wallClockTime: '14:10:00', type: 'PIPELINE_INIT', level: 'INFO', message: 'Batch run initialized' },
+      { id: 'b2', timestampOffset: 0.1, wallClockTime: '14:10:01', type: 'STAGE_START', stageId: 'batch-intake', level: 'INFO', message: 'Batch intake started' },
+      { id: 'b3', timestampOffset: 0.5, wallClockTime: '14:10:02', type: 'STAGE_COMPLETE', stageId: 'batch-intake', level: 'SUCCESS', message: 'Manifest created' },
+      { id: 'b4', timestampOffset: 0.55, wallClockTime: '14:10:02', type: 'STAGE_START', stageId: 'batch-fanout', level: 'INFO', message: 'Worker fanout started' },
+      { id: 'b5', timestampOffset: 3.2, wallClockTime: '14:10:04', type: 'STAGE_COMPLETE', stageId: 'batch-fanout', level: 'SUCCESS', message: 'Fanout complete' },
+      { id: 'b6', timestampOffset: 3.25, wallClockTime: '14:10:04', type: 'STAGE_START', stageId: 'batch-bundle', level: 'INFO', message: 'Bundle assembly started' },
+      { id: 'b7', timestampOffset: 4.2, wallClockTime: '14:10:05', type: 'STAGE_COMPLETE', stageId: 'batch-bundle', level: 'SUCCESS', message: 'Release bundle ready' }
+    ]
   },
+  {
+    id: 'qa-validation', name: 'QA Validation', category: 'Quality Assurance',
+    description: 'Automated test suite verifying geometric fidelity and raster diff score.',
+    defaultTimeSeconds: 1.8, maxTimelineSeconds: 5.0,
+    codeDefinition: `// QA Validation Pipeline
+definePipeline('QA Validation').step('01_render', renderScales).step('02_diff', computeSSIM);`,
+    nodes: [
+      { id: 'qa-render', stepNumber: '01', name: 'Render', description: 'Render stage for the qa workflow.', plannedStart: 0.1, expectedDuration: 0.5, dependsOn: [], inputTemplate: { name: 'master.svg', size: 'Runtime' }, outputTemplate: { name: 'diff_renders.tar', size: 'Runtime', runningStatusText: 'Processing render...' }, dependencies: [{ name: 'resvg', status: 'Available' }], baseCpuProfile: { runningBase: 62, runningVariance: 10, idleBase: 5 }, baseMemProfile: { runningBase: 34, runningVariance: 5, idleBase: 12 } },
+      { id: 'qa-diff', stepNumber: '02', name: 'Diff Score', description: 'Diff Score stage for the qa workflow.', plannedStart: 0.6, expectedDuration: 1.2, dependsOn: ['qa-render'], inputTemplate: { name: 'diff_renders.tar', size: 'Runtime' }, outputTemplate: { name: 'report.json', size: 'Runtime', runningStatusText: 'Processing diff score...' }, dependencies: [{ name: 'pixelmatch', status: 'Available' }], baseCpuProfile: { runningBase: 70, runningVariance: 10, idleBase: 5 }, baseMemProfile: { runningBase: 40, runningVariance: 5, idleBase: 12 } }
+    ],
+    eventStream: [
+      { id: 'q1', timestampOffset: 0.05, wallClockTime: '14:05:00', type: 'PIPELINE_INIT', level: 'INFO', message: 'QA test suite started' },
+      { id: 'q2', timestampOffset: 0.1, wallClockTime: '14:05:01', type: 'STAGE_START', stageId: 'qa-render', level: 'INFO', message: 'Comparison render started' },
+      { id: 'q3', timestampOffset: 0.6, wallClockTime: '14:05:02', type: 'STAGE_COMPLETE', stageId: 'qa-render', level: 'SUCCESS', message: 'Scale renders complete' },
+      { id: 'q4', timestampOffset: 0.65, wallClockTime: '14:05:02', type: 'STAGE_START', stageId: 'qa-diff', level: 'INFO', message: 'SSIM comparison started' },
+      { id: 'q5', timestampOffset: 1.8, wallClockTime: '14:05:03', type: 'STAGE_COMPLETE', stageId: 'qa-diff', level: 'SUCCESS', message: 'SSIM fidelity passed' }
+    ]
+  },
+  {
+    id: 'export-pipeline', name: 'Export', category: 'Distribution',
+    description: 'Cloud replication and artifact signing for production publishing.',
+    defaultTimeSeconds: 1.1, maxTimelineSeconds: 4.0,
+    codeDefinition: `// Export Pipeline
+definePipeline('Export').step('01_sign', signPayload).step('02_publish', syncEdgeCDN);`,
+    nodes: [
+      { id: 'exp-sign', stepNumber: '01', name: 'Cryptographic Sign', description: 'Cryptographic Sign stage for the exp workflow.', plannedStart: 0.1, expectedDuration: 0.4, dependsOn: [], inputTemplate: { name: 'package.tar.gz', size: 'Runtime' }, outputTemplate: { name: 'checksums.txt', size: 'Runtime', runningStatusText: 'Processing cryptographic sign...' }, dependencies: [{ name: 'OpenSSL', status: 'Available' }], baseCpuProfile: { runningBase: 30, runningVariance: 10, idleBase: 5 }, baseMemProfile: { runningBase: 18, runningVariance: 5, idleBase: 12 } },
+      { id: 'exp-publish', stepNumber: '02', name: 'CDN Sync', description: 'CDN Sync stage for the exp workflow.', plannedStart: 0.5, expectedDuration: 0.6, dependsOn: ['exp-sign'], inputTemplate: { name: 'package.tar.gz', size: 'Runtime' }, outputTemplate: { name: 'release_urls.json', size: 'Runtime', runningStatusText: 'Processing cdn sync...' }, dependencies: [{ name: 'Cloudflare-Worker-API', status: 'Available' }], baseCpuProfile: { runningBase: 28, runningVariance: 10, idleBase: 5 }, baseMemProfile: { runningBase: 20, runningVariance: 5, idleBase: 12 } }
+    ],
+    eventStream: [
+      { id: 'x1', timestampOffset: 0.05, wallClockTime: '13:58:00', type: 'PIPELINE_INIT', level: 'INFO', message: 'Export job initiated' },
+      { id: 'x2', timestampOffset: 0.1, wallClockTime: '13:58:01', type: 'STAGE_START', stageId: 'exp-sign', level: 'INFO', message: 'Signing started' },
+      { id: 'x3', timestampOffset: 0.5, wallClockTime: '13:58:01', type: 'STAGE_COMPLETE', stageId: 'exp-sign', level: 'SUCCESS', message: 'Manifest signed' },
+      { id: 'x4', timestampOffset: 0.55, wallClockTime: '13:58:01', type: 'STAGE_START', stageId: 'exp-publish', level: 'INFO', message: 'Edge synchronization started' },
+      { id: 'x5', timestampOffset: 1.1, wallClockTime: '13:58:02', type: 'STAGE_COMPLETE', stageId: 'exp-publish', level: 'SUCCESS', message: 'Edge distribution finished' }
+    ]
+  }
 ];
