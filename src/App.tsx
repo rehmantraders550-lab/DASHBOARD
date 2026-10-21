@@ -11,6 +11,8 @@ import { INITIAL_WORKFLOWS } from './data/mockWorkflows';
 import { STATIC_PIPELINES } from './engine/pipelineDefinitions';
 import { deriveWorkflowState } from './engine/stateDerivation';
 import { simulatedRuntimeSource } from './engine/runtimeAdapter';
+import { createResilienceEvent, RESILIENCE_SCENARIOS, ResilienceScenarioKind } from './engine/resilience';
+import type { RuntimeEvent } from './engine/workflowModel';
 
 export default function App() {
   const [workflows] = useState(INITIAL_WORKFLOWS);
@@ -22,6 +24,7 @@ export default function App() {
   const [selectedStageId, setSelectedStageId] = useState<string>('vectorize');
   const [isInspectorOpen, setIsInspectorOpen] = useState<boolean>(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
+  const [injectedEvents, setInjectedEvents] = useState<RuntimeEvent[]>([]);
 
   // 1. Static Workflow Definition Lookup
   const activePipelineDef =
@@ -34,6 +37,7 @@ export default function App() {
     currentTime,
     isRunning
   );
+  runtimeSnapshot.injectedEvents = injectedEvents;
 
   // 3. STATE DERIVATION LAYER
   // Workflow Definition + normalized RuntimeSnapshot -> UI state
@@ -72,6 +76,18 @@ export default function App() {
     setCurrentTime(activePipelineDef.defaultTimeSeconds || 1.4);
     setSelectedStageId(activePipelineDef.nodes[2]?.id || activePipelineDef.nodes[0].id);
     setIsInspectorOpen(true);
+    setInjectedEvents([]);
+  };
+
+  const handleInjectScenario = (scenarioId: ResilienceScenarioKind, stageId: string) => {
+    const scenario = RESILIENCE_SCENARIOS.find((item) => item.id === scenarioId);
+    if (!scenario) return;
+    setInjectedEvents((previous) => [
+      ...previous,
+      createResilienceEvent(scenario, stageId, currentTime),
+    ]);
+    setSelectedStageId(stageId);
+    setIsRunning(false);
   };
 
   const handleStepForward = () => {
@@ -89,6 +105,7 @@ export default function App() {
     if (targetPipeline) {
       setCurrentTime(targetPipeline.defaultTimeSeconds || 1.0);
       setSelectedStageId(targetPipeline.nodes[0].id);
+      setInjectedEvents([]);
     }
   };
 
@@ -168,6 +185,9 @@ export default function App() {
             simSpeed={simSpeed}
             onChangeSpeed={setSimSpeed}
             onReturnToLiveMap={() => setActiveNavTab('Live Map')}
+            stages={activeWorkflow.stages}
+            resilienceImpacts={derived.resilienceImpacts}
+            onInjectScenario={handleInjectScenario}
           />
         )}
       </div>
