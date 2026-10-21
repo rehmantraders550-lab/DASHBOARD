@@ -49,7 +49,7 @@ function assertTraceMatchesDefinition(
   const nodeIds = new Set(definition.nodes.map((node) => node.id));
   const unknownStageIds = trace.events
     .map((event) => event.stageId)
-    .filter((stageId): stageId is string => Boolean(stageId) && !nodeIds.has(stageId));
+    .filter((stageId): stageId is string => typeof stageId === 'string' && !nodeIds.has(stageId));
 
   if (unknownStageIds.length > 0) {
     throw new Error(
@@ -113,7 +113,7 @@ export class LiveRuntimeEventSource implements RuntimeEventSource {
     );
     const unknownStageIds = events
       .map((event) => event.stageId)
-      .filter((stageId): stageId is string => Boolean(stageId) && !nodeIds.has(stageId));
+      .filter((stageId): stageId is string => typeof stageId === 'string' && !nodeIds.has(stageId));
 
     if (unknownStageIds.length > 0) {
       throw new Error(
