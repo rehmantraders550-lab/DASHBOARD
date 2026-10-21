@@ -1,6 +1,6 @@
 export type NodeVisualType = 'intake' | 'analysis' | 'vectorize' | 'validation' | 'export' | 'fanout' | 'bundle' | 'render' | 'comparison' | 'sign' | 'publish' | 'generic';
 
-export type StageStatus = 'completed' | 'running' | 'waiting' | 'failed';
+export type StageStatus = 'completed' | 'running' | 'waiting' | 'failed' | 'retrying' | 'blocked' | 'fallback' | 'recovered';
 
 export interface StageDependency {
   name: string;
