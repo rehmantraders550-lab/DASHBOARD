@@ -139,6 +139,7 @@ export default function App() {
                 workflowName={activeWorkflow.name}
                 workflowId={activeWorkflow.id}
                 allLogs={activeWorkflow.logs}
+                runtimeSourceMode={runtimeSnapshot.mode}
               />
             )}
           </main>
