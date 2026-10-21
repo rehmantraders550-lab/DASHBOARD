@@ -46,6 +46,7 @@ export interface RuntimeEvent {
     | 'STAGE_COMPLETE'
     | 'ARTIFACT_PRODUCED'
     | 'DEPENDENCY_RESOLVED'
+    | 'RESILIENCE_STATE'
     | 'LOG_MESSAGE';
   stageId?: string;
   level: 'INFO' | 'WARN' | 'DEBUG' | 'SUCCESS';
