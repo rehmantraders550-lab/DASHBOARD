@@ -4,6 +4,7 @@ import {
   RuntimeEvent,
   RuntimeTelemetry,
 } from './workflowModel';
+import { RuntimeSnapshot } from './runtimeAdapter';
 import {
   WorkflowStage,
   StageStatus,
@@ -50,14 +51,14 @@ export interface DerivedWorkflowState {
  */
 export function deriveWorkflowState(
   definition: StaticPipelineDefinition,
-  currentTimeSeconds: number,
-  isRunning: boolean,
+  runtime: RuntimeSnapshot,
   selectedStageId: string
 ): DerivedWorkflowState {
+  const { currentTimeSeconds, isRunning, events } = runtime;
   // 1. Derive Node States based on definition and virtual execution clock
   // Completion truth comes from elapsed runtime events, not planned timestamps.
   const completedStageIds = new Set(
-    definition.eventStream
+    events
       .filter(
         (evt: RuntimeEvent) =>
           evt.type === 'STAGE_COMPLETE' &&
@@ -124,7 +125,7 @@ export function deriveWorkflowState(
     };
 
     // Filter runtime events up to current clock
-    const nodeEvents = definition.eventStream
+    const nodeEvents = events
       .filter((evt: RuntimeEvent) => evt.stageId === node.id && evt.timestampOffset <= currentTimeSeconds)
       .map((evt: RuntimeEvent) => ({
         timestamp: evt.wallClockTime,
@@ -205,7 +206,7 @@ export function deriveWorkflowState(
   }
 
   // 3. Derive Chronological Execution Logs up to current clock
-  const derivedLogs: WorkflowLogEntry[] = definition.eventStream
+  const derivedLogs: WorkflowLogEntry[] = events
     .filter((evt: RuntimeEvent) => evt.timestampOffset <= currentTimeSeconds)
     .map((evt: RuntimeEvent) => ({
       id: evt.id,
@@ -227,7 +228,7 @@ export function deriveWorkflowState(
   const runningMem = runningNodes.length * 24.4;
   const activeMemoryMb = Number((baseMem + runningMem + (Math.sin(currentTimeSeconds * 2) * 2)).toFixed(1));
 
-  const telemetry: RuntimeTelemetry = {
+  const telemetry: RuntimeTelemetry = runtime.telemetry || {
     workerThreads: runningNodes.length > 0 ? 4 : 1,
     activeMemoryMb,
     peakMemoryLimitMb: 512,
