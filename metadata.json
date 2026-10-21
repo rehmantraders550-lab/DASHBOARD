@@ -1,0 +1,7 @@
+{
+  "name": "ORVIA Code Visualizer — Workflow Pipe Live Map",
+  "description": "Minimal, elegant live workflow visualizer for inspecting code-processing pipelines in real time.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

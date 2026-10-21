@@ -1,0 +1,6 @@
+{
+  "summary":  "Implementation plan for the Download Logs feature in the NodeInspector, adding dual format export (JSON and Plain Text) with correlated stage events and pipeline execution logs.",
+  "updatedAt":  "2026-10-21T06:51:34.687198759Z",
+  "requestFeedback":  true,
+  "userFacing":  true
+}
