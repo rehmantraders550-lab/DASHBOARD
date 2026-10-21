@@ -9,6 +9,7 @@ import {
   FileSpreadsheet
 } from 'lucide-react';
 import { WorkflowStage, WorkflowLogEntry } from '../types/workflow';
+import { StageMetricsSparkline } from './StageMetricsSparkline';
 
 interface NodeInspectorProps {
   stage: WorkflowStage | null;
@@ -240,6 +241,12 @@ export const NodeInspector: React.FC<NodeInspectorProps> = ({
             </span>
           </div>
         </div>
+
+        {/* Real-time D3 Metrics Sparkline */}
+        <StageMetricsSparkline
+          stage={stage}
+          isRunningWorkflow={isRunningWorkflow}
+        />
 
         {/* Description */}
         <div>
