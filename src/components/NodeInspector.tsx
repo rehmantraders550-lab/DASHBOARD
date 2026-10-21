@@ -19,6 +19,7 @@ interface NodeInspectorProps {
   workflowName?: string;
   workflowId?: string;
   allLogs?: WorkflowLogEntry[];
+  runtimeSourceMode?: RuntimeSourceMode;
 }
 
 export const NodeInspector: React.FC<NodeInspectorProps> = ({
@@ -28,6 +29,7 @@ export const NodeInspector: React.FC<NodeInspectorProps> = ({
   workflowName = 'Artwork to Vector',
   workflowId = 'artwork-to-vector',
   allLogs = [],
+  runtimeSourceMode = 'SIMULATED',
 }) => {
   const [exportFormat, setExportFormat] = useState<'json' | 'text'>('json');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
