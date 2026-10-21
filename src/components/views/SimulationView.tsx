@@ -1,9 +1,12 @@
-import React from 'react';
-import { Play, Square, RotateCcw, FastForward, SkipForward, ArrowRight, Sliders } from 'lucide-react';
-import { WorkflowDefinition } from '../../types/workflow';
+import React, { useState } from 'react';
+import { Play, Square, RotateCcw, SkipForward, ArrowRight, Sliders, AlertTriangle, RotateCw, Route, ShieldCheck } from 'lucide-react';
+import { WorkflowDefinition, WorkflowStage } from '../../types/workflow';
+import { RESILIENCE_SCENARIOS, ResilienceImpact, ResilienceScenarioKind } from '../../engine/resilience';
 
 interface SimulationViewProps {
   workflow: WorkflowDefinition;
+  stages: WorkflowStage[];
+  resilienceImpacts: ResilienceImpact[];
   isRunning: boolean;
   onToggleRunning: () => void;
   currentTime: number;
@@ -12,136 +15,83 @@ interface SimulationViewProps {
   simSpeed: number;
   onChangeSpeed: (speed: number) => void;
   onReturnToLiveMap: () => void;
+  onInjectScenario: (scenario: ResilienceScenarioKind, stageId: string) => void;
 }
 
 export const SimulationView: React.FC<SimulationViewProps> = ({
-  workflow,
-  isRunning,
-  onToggleRunning,
-  currentTime,
-  onStepForward,
-  onReset,
-  simSpeed,
-  onChangeSpeed,
-  onReturnToLiveMap,
+  workflow, stages, resilienceImpacts, isRunning, onToggleRunning, currentTime,
+  onStepForward, onReset, simSpeed, onChangeSpeed, onReturnToLiveMap, onInjectScenario,
 }) => {
+  const [targetStageId, setTargetStageId] = useState(stages[0]?.id || '');
+  const activeImpact = resilienceImpacts[resilienceImpacts.length - 1];
+  const target = stages.find((stage) => stage.id === targetStageId) || stages[0];
+
   return (
     <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 overflow-y-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold tracking-wider text-[#737373] uppercase">
-            <Sliders className="w-4 h-4 text-[#F97316]" />
-            <span>INTERACTIVE SIMULATION</span>
+            <Sliders className="w-4 h-4 text-[#F97316]" /><span>ORVIA RESILIENCE LAB</span>
           </div>
-          <h1 className="font-editorial text-3xl font-normal text-[#242628] mt-1">
-            Pipeline Simulation Controller
-          </h1>
-          <p className="text-sm text-[#737373] mt-0.5">
-            Test edge cases, simulate data backpressure, and step through workflow stages.
-          </p>
+          <h1 className="font-editorial text-3xl font-normal text-[#242628] mt-1">Failure & Recovery Simulation</h1>
+          <p className="text-sm text-[#737373] mt-0.5">Inject controlled runtime conditions and inspect their downstream impact.</p>
         </div>
-
-        <button
-          onClick={onReturnToLiveMap}
-          className="flex items-center gap-2 px-4 py-2 bg-[#F97316] text-white hover:bg-[#EA580C] rounded-lg text-sm font-medium shadow-xs transition-colors self-start"
-        >
-          <span>View on Live Map</span>
-          <ArrowRight className="w-4 h-4" />
+        <button onClick={onReturnToLiveMap} className="flex items-center gap-2 px-4 py-2 bg-[#F97316] text-white hover:bg-[#EA580C] rounded-lg text-sm font-medium shadow-xs transition-colors self-start">
+          <span>View on Live Map</span><ArrowRight className="w-4 h-4" />
         </button>
       </div>
 
-      {/* Control Console Card */}
       <div className="bg-white rounded-2xl border border-[#E5E1DA] p-6 shadow-xs space-y-6">
-        <h3 className="font-editorial text-xl font-normal text-[#242628]">
-          Simulation Controls
-        </h3>
-
         <div className="flex flex-wrap items-center gap-3">
-          {/* Play/Pause */}
-          <button
-            onClick={onToggleRunning}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all shadow-xs ${
-              isRunning
-                ? 'bg-[#242628] text-white hover:bg-[#343638]'
-                : 'bg-[#F97316] text-white hover:bg-[#EA580C]'
-            }`}
-          >
-            {isRunning ? (
-              <>
-                <Square className="w-4 h-4 fill-current" />
-                <span>Pause Simulation</span>
-              </>
-            ) : (
-              <>
-                <Play className="w-4 h-4 fill-current" />
-                <span>Run Simulation</span>
-              </>
-            )}
+          <button onClick={onToggleRunning} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white ${isRunning ? 'bg-[#242628]' : 'bg-[#F97316]'}`}>
+            {isRunning ? <Square className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
+            {isRunning ? 'Pause Simulation' : 'Run Simulation'}
           </button>
-
-          {/* Step Forward */}
-          <button
-            onClick={onStepForward}
-            className="flex items-center gap-2 px-4 py-2.5 bg-[#F9F7F3] hover:bg-[#EDE8E0] text-[#242628] border border-[#E5E1DA] rounded-lg text-sm font-medium transition-colors"
-          >
-            <SkipForward className="w-4 h-4" />
-            <span>Step +0.2s</span>
-          </button>
-
-          {/* Reset */}
-          <button
-            onClick={onReset}
-            className="flex items-center gap-2 px-4 py-2.5 bg-[#F9F7F3] hover:bg-[#EDE8E0] text-[#737373] hover:text-[#242628] border border-[#E5E1DA] rounded-lg text-sm font-medium transition-colors"
-          >
-            <RotateCcw className="w-4 h-4" />
-            <span>Reset (1.4s)</span>
-          </button>
-
-          {/* Speed Selectors */}
+          <button onClick={onStepForward} className="flex items-center gap-2 px-4 py-2.5 bg-[#F9F7F3] border border-[#E5E1DA] rounded-lg text-sm"><SkipForward className="w-4 h-4" />Step +0.2s</button>
+          <button onClick={onReset} className="flex items-center gap-2 px-4 py-2.5 bg-[#F9F7F3] border border-[#E5E1DA] rounded-lg text-sm text-[#737373]"><RotateCcw className="w-4 h-4" />Reset</button>
           <div className="flex items-center gap-1 bg-[#F9F7F3] p-1 border border-[#E5E1DA] rounded-lg ml-auto">
-            <span className="text-xs text-[#8E8B85] px-2 font-mono">Speed:</span>
-            {[0.5, 1, 2, 4].map((spd) => (
-              <button
-                key={spd}
-                onClick={() => onChangeSpeed(spd)}
-                className={`px-2.5 py-1 rounded text-xs font-mono font-medium transition-colors ${
-                  simSpeed === spd
-                    ? 'bg-[#242628] text-white'
-                    : 'text-[#737373] hover:text-[#242628]'
-                }`}
-              >
-                {spd}x
+            {[0.5,1,2,4].map((speed)=><button key={speed} onClick={()=>onChangeSpeed(speed)} className={`px-2.5 py-1 rounded text-xs font-mono ${simSpeed===speed?'bg-[#242628] text-white':'text-[#737373]'}`}>{speed}x</button>)}
+          </div>
+        </div>
+
+        <div className="pt-5 border-t border-[#EDE8E0]">
+          <div className="flex flex-col md:flex-row gap-3 md:items-end">
+            <label className="flex-1 text-xs font-semibold uppercase tracking-wider text-[#737373]">
+              Target stage
+              <select value={targetStageId} onChange={(e)=>setTargetStageId(e.target.value)} className="mt-2 w-full bg-[#F9F7F3] border border-[#E5E1DA] rounded-lg px-3 py-2.5 text-sm text-[#242628] normal-case">
+                {stages.map((stage)=><option key={stage.id} value={stage.id}>{stage.stepNumber} — {stage.name}</option>)}
+              </select>
+            </label>
+          </div>
+          <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3 mt-4">
+            {RESILIENCE_SCENARIOS.map((scenario)=>(
+              <button key={scenario.id} onClick={()=>target && onInjectScenario(scenario.id,target.id)} className="text-left p-4 rounded-xl border border-[#E5E1DA] bg-[#F9F7F3] hover:border-[#B45309] transition-colors">
+                <div className="flex items-center gap-2 text-sm font-semibold text-[#242628]">
+                  {scenario.state==='recovered'?<ShieldCheck className="w-4 h-4 text-[#16A34A]" />:scenario.state==='retrying'?<RotateCw className="w-4 h-4 text-[#B45309]" />:scenario.state==='fallback'?<Route className="w-4 h-4 text-[#B45309]" />:<AlertTriangle className="w-4 h-4 text-[#B45309]" />}
+                  {scenario.label}
+                </div>
+                <p className="text-xs text-[#737373] mt-1.5">{scenario.message}</p>
               </button>
             ))}
           </div>
         </div>
+      </div>
 
-        {/* Live Simulator Status Bar */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-[#EDE8E0]">
-          <div className="bg-[#F9F7F3] rounded-xl p-4 border border-[#EBE7E0]">
-            <span className="text-xs text-[#737373] uppercase tracking-wider block">Current State</span>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#F97316] animate-pulse" />
-              <span className="font-semibold text-sm text-[#242628]">Step 03 — Vectorize</span>
-            </div>
-            <span className="text-xs text-[#8E8B85] mt-1 block">Progress: 60% • 1,284 paths built</span>
-          </div>
-
-          <div className="bg-[#F9F7F3] rounded-xl p-4 border border-[#EBE7E0]">
-            <span className="text-xs text-[#737373] uppercase tracking-wider block">Virtual Clock</span>
-            <div className="font-mono text-xl font-semibold text-[#242628] mt-1">
-              {currentTime.toFixed(2)}s
-            </div>
-            <span className="text-xs text-[#8E8B85] mt-1 block">Total pipeline duration: ~4.5s</span>
-          </div>
-
-          <div className="bg-[#F9F7F3] rounded-xl p-4 border border-[#EBE7E0]">
-            <span className="text-xs text-[#737373] uppercase tracking-wider block">Active Buffer Pool</span>
-            <div className="font-mono text-xl font-semibold text-[#242628] mt-1">
-              12.4 MB in Flight
-            </div>
-            <span className="text-xs text-[#16A34A] mt-1 block font-medium">0 packet drops • Zero memory leak</span>
-          </div>
+      <div className="grid lg:grid-cols-3 gap-4">
+        <div className="bg-white rounded-2xl border border-[#E5E1DA] p-5">
+          <span className="text-xs uppercase tracking-wider text-[#737373]">Virtual clock</span>
+          <div className="font-mono text-2xl text-[#242628] mt-2">{currentTime.toFixed(2)}s</div>
+          <div className="text-xs text-[#8E8B85] mt-1">{workflow.name}</div>
+        </div>
+        <div className="bg-white rounded-2xl border border-[#E5E1DA] p-5">
+          <span className="text-xs uppercase tracking-wider text-[#737373]">Active condition</span>
+          <div className="font-semibold text-[#242628] mt-2">{activeImpact ? activeImpact.state.toUpperCase() : 'NORMAL'}</div>
+          <div className="text-xs text-[#8E8B85] mt-1">{activeImpact ? stages.find(s=>s.id===activeImpact.stageId)?.name : 'No injected resilience condition'}</div>
+        </div>
+        <div className="bg-white rounded-2xl border border-[#E5E1DA] p-5">
+          <span className="text-xs uppercase tracking-wider text-[#737373]">Impact radius</span>
+          <div className="font-mono text-2xl text-[#242628] mt-2">{activeImpact?.affectedStageIds.length || 0}</div>
+          <div className="text-xs text-[#8E8B85] mt-1">{activeImpact?.affectedStageIds.length ? activeImpact.affectedStageIds.map(id=>stages.find(s=>s.id===id)?.name || id).join(' → ') : 'No downstream stages affected'}</div>
         </div>
       </div>
     </div>
