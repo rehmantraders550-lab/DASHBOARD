@@ -1,10 +1,11 @@
-import { StageDependency, StageEvent } from '../types/workflow';
+import { StageDependency, NodeVisualType } from '../types/workflow';
 
 // Static declaration of a pipeline node in the DAG
 export interface StaticNodeDefinition {
   id: string;
   stepNumber: string; // e.g. "01"
   name: string; // e.g. "Intake"
+  visualType: NodeVisualType;
   description: string;
   plannedStart: number; // in seconds on virtual timeline
   expectedDuration: number; // in seconds
@@ -45,6 +46,7 @@ export interface RuntimeEvent {
     | 'STAGE_COMPLETE'
     | 'ARTIFACT_PRODUCED'
     | 'DEPENDENCY_RESOLVED'
+    | 'RESILIENCE_STATE'
     | 'LOG_MESSAGE';
   stageId?: string;
   level: 'INFO' | 'WARN' | 'DEBUG' | 'SUCCESS';

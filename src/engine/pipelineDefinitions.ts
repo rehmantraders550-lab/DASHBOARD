@@ -40,7 +40,7 @@ export default definePipeline('Artwork to Vector', {
       {
         id: 'intake',
         stepNumber: '01',
-        name: 'Intake',
+        name: 'Intake', visualType: 'intake',
         description: 'Ingests raw raster assets, extracts metadata, and normalizes DPI and color profile.',
         plannedStart: 0.1,
         expectedDuration: 0.3,
@@ -66,7 +66,7 @@ export default definePipeline('Artwork to Vector', {
       {
         id: 'analyze',
         stepNumber: '02',
-        name: 'Analyze',
+        name: 'Analyze', visualType: 'analysis',
         description: 'Executes edge detection, segmentation, palette extraction, and path boundary prediction.',
         plannedStart: 0.4,
         expectedDuration: 0.7,
@@ -92,7 +92,7 @@ export default definePipeline('Artwork to Vector', {
       {
         id: 'vectorize',
         stepNumber: '03',
-        name: 'Vectorize',
+        name: 'Vectorize', visualType: 'vectorize',
         description: 'Reconstructs clean vector paths from the analyzed artwork.',
         plannedStart: 0.8,
         expectedDuration: 1.4, // Running from 0.8 to 2.2, at 1.4s it is running (duration: 1.4s displayed)
@@ -119,7 +119,7 @@ export default definePipeline('Artwork to Vector', {
       {
         id: 'validate',
         stepNumber: '04',
-        name: 'Validate',
+        name: 'Validate', visualType: 'validation',
         description: 'Verifies node continuity, self-intersecting loops, and SVG 1.1 / 2.0 standard conformance.',
         plannedStart: 2.2,
         expectedDuration: 0.8,
@@ -145,7 +145,7 @@ export default definePipeline('Artwork to Vector', {
       {
         id: 'export',
         stepNumber: '05',
-        name: 'Export',
+        name: 'Export', visualType: 'export',
         description: 'Compiles clean vector deliverables in SVG, EPS, and high-fidelity PDF formats.',
         plannedStart: 3.0,
         expectedDuration: 1.5,
@@ -206,7 +206,7 @@ export default definePipeline('Artwork to Vector', {
       {
         id: 'color-intake',
         stepNumber: '01',
-        name: 'Intake',
+        name: 'Intake', visualType: 'intake',
         description: 'Read input imagery and calibrate color gamut profile.',
         plannedStart: 0.1,
         expectedDuration: 0.2,
@@ -220,7 +220,7 @@ export default definePipeline('Artwork to Vector', {
       {
         id: 'color-k-means',
         stepNumber: '02',
-        name: 'K-Means',
+        name: 'K-Means', visualType: 'analysis',
         description: 'Run accelerated K-Means clustering across 16 color centroids.',
         plannedStart: 0.3,
         expectedDuration: 0.7,
@@ -234,7 +234,7 @@ export default definePipeline('Artwork to Vector', {
       {
         id: 'color-export',
         stepNumber: '03',
-        name: 'Export',
+        name: 'Export', visualType: 'export',
         description: 'Generates ASE, CSS, and Pantone match swatches.',
         plannedStart: 1.0,
         expectedDuration: 0.2,
@@ -248,9 +248,12 @@ export default definePipeline('Artwork to Vector', {
     ],
     eventStream: [
       { id: 'c1', timestampOffset: 0.05, wallClockTime: '14:18:00', type: 'PIPELINE_INIT', level: 'INFO', message: 'Color Analysis pipeline started' },
-      { id: 'c2', timestampOffset: 0.1, wallClockTime: '14:18:01', type: 'STAGE_START', stageId: 'color-intake', level: 'INFO', message: 'Color gamut normalized' },
-      { id: 'c3', timestampOffset: 0.3, wallClockTime: '14:18:02', type: 'STAGE_START', stageId: 'color-k-means', level: 'INFO', message: '16 dominant centroids clustered' },
-      { id: 'c4', timestampOffset: 1.0, wallClockTime: '14:18:03', type: 'STAGE_COMPLETE', stageId: 'color-export', level: 'SUCCESS', message: 'Color palette ready for export' },
+      { id: 'c2', timestampOffset: 0.1, wallClockTime: '14:18:01', type: 'STAGE_START', stageId: 'color-intake', level: 'INFO', message: 'Color gamut normalization started' },
+      { id: 'c3', timestampOffset: 0.3, wallClockTime: '14:18:01', type: 'STAGE_COMPLETE', stageId: 'color-intake', level: 'SUCCESS', message: 'Color gamut normalized' },
+      { id: 'c4', timestampOffset: 0.3, wallClockTime: '14:18:02', type: 'STAGE_START', stageId: 'color-k-means', level: 'INFO', message: '16-centroid clustering started' },
+      { id: 'c5', timestampOffset: 1.0, wallClockTime: '14:18:02', type: 'STAGE_COMPLETE', stageId: 'color-k-means', level: 'SUCCESS', message: '16 dominant centroids clustered' },
+      { id: 'c6', timestampOffset: 1.0, wallClockTime: '14:18:03', type: 'STAGE_START', stageId: 'color-export', level: 'INFO', message: 'Palette export started' },
+      { id: 'c7', timestampOffset: 1.2, wallClockTime: '14:18:03', type: 'STAGE_COMPLETE', stageId: 'color-export', level: 'SUCCESS', message: 'Color palette ready for export' },
     ],
   },,
   {

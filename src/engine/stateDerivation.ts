@@ -4,6 +4,8 @@ import {
   RuntimeEvent,
   RuntimeTelemetry,
 } from './workflowModel';
+import { RuntimeSnapshot } from './runtimeAdapter';
+import { deriveResilienceImpacts, ResilienceImpact } from './resilience';
 import {
   WorkflowStage,
   StageStatus,
@@ -11,7 +13,7 @@ import {
   WorkflowDefinition,
 } from '../types/workflow';
 
-export type PipeVisualState = 'completed' | 'active-transitional' | 'waiting';
+export type PipeVisualState = 'completed' | 'active-transitional' | 'waiting' | 'attention';
 
 export interface DerivedPipe {
   id: string;
@@ -34,6 +36,7 @@ export interface DerivedWorkflowState {
   activeStage: WorkflowStage;
   telemetry: RuntimeTelemetry;
   workflowAdapter: WorkflowDefinition;
+  resilienceImpacts: ResilienceImpact[];
 }
 
 /**
@@ -50,12 +53,29 @@ export interface DerivedWorkflowState {
  */
 export function deriveWorkflowState(
   definition: StaticPipelineDefinition,
-  currentTimeSeconds: number,
-  isRunning: boolean,
+  runtime: RuntimeSnapshot,
   selectedStageId: string
 ): DerivedWorkflowState {
+  const { currentTimeSeconds, isRunning } = runtime;
+  const events = [...runtime.events, ...(runtime.injectedEvents || [])]
+    .filter((event) => event.timestampOffset <= currentTimeSeconds)
+    .sort((a, b) => a.timestampOffset - b.timestampOffset);
+  const resilienceImpacts = deriveResilienceImpacts(definition, events);
+  const resilienceByStage = new Map(resilienceImpacts.map((impact) => [impact.stageId, impact.state]));
   // 1. Derive Node States based on definition and virtual execution clock
-  const derivedStages: WorkflowStage[] = definition.nodes.map((node: StaticNodeDefinition, index: number) => {
+  // Completion truth comes from elapsed runtime events, not planned timestamps.
+  const completedStageIds = new Set(
+    events
+      .filter(
+        (evt: RuntimeEvent) =>
+          evt.type === 'STAGE_COMPLETE' &&
+          evt.stageId &&
+          evt.timestampOffset <= currentTimeSeconds
+      )
+      .map((evt: RuntimeEvent) => evt.stageId as string)
+  );
+
+  const derivedStages: WorkflowStage[] = definition.nodes.map((node: StaticNodeDefinition) => {
     const plannedStart = node.plannedStart;
     const plannedEnd = node.plannedStart + node.expectedDuration;
 
@@ -63,11 +83,26 @@ export function deriveWorkflowState(
     let duration = 'Waiting';
     let progressPercent = 0;
 
-    if (currentTimeSeconds >= plannedEnd) {
+    const dependenciesSatisfied = node.dependsOn.every((dependencyId) =>
+      completedStageIds.has(dependencyId)
+    );
+    const inputReady = node.dependsOn.length === 0 || dependenciesSatisfied;
+    const nodeCompleted = completedStageIds.has(node.id);
+    const resilienceState = resilienceByStage.get(node.id);
+
+    if (resilienceState && resilienceState !== 'recovered') {
+      status = resilienceState;
+      duration = resilienceState[0].toUpperCase() + resilienceState.slice(1);
+      progressPercent = 0;
+    } else if (resilienceState === 'recovered') {
+      status = 'recovered';
+      duration = 'Recovered';
+      progressPercent = 100;
+    } else if (nodeCompleted) {
       status = 'completed';
       duration = `${node.expectedDuration.toFixed(1)}s`;
       progressPercent = 100;
-    } else if (currentTimeSeconds >= plannedStart && currentTimeSeconds < plannedEnd) {
+    } else if (inputReady && currentTimeSeconds >= plannedStart && currentTimeSeconds < plannedEnd) {
       status = 'running';
       const elapsed = Math.max(currentTimeSeconds - plannedStart, 0.1);
       duration = `${elapsed.toFixed(1)}s`;
@@ -81,11 +116,10 @@ export function deriveWorkflowState(
       progressPercent = 0;
     }
 
-    // Derive inputs: check if upstream node is completed
-    const upstreamCompleted = index === 0 || currentTimeSeconds >= definition.nodes[index - 1].plannedStart;
+    // Input readiness is dependency-truth based, never array-position based.
     const input = {
       name: node.inputTemplate.name,
-      size: upstreamCompleted ? node.inputTemplate.size : 'Pending',
+      size: inputReady ? node.inputTemplate.size : 'Pending',
       type: node.inputTemplate.type,
     };
 
@@ -96,14 +130,18 @@ export function deriveWorkflowState(
           ? node.outputTemplate.name
           : status === 'running'
           ? node.outputTemplate.runningStatusText || 'Processing...'
-          : `Waiting for ${index > 0 ? definition.nodes[index - 1].name : 'input'} step...`,
+          : node.dependsOn.length > 0
+          ? `Waiting for ${node.dependsOn
+              .map((dependencyId) => definition.nodes.find((candidate) => candidate.id === dependencyId)?.name || dependencyId)
+              .join(', ')}...`
+          : 'Waiting for input...',
       isProcessing: status === 'running',
       name: status === 'completed' ? node.outputTemplate.name : undefined,
       size: status === 'completed' ? node.outputTemplate.size : undefined,
     };
 
     // Filter runtime events up to current clock
-    const nodeEvents = definition.eventStream
+    const nodeEvents = events
       .filter((evt: RuntimeEvent) => evt.stageId === node.id && evt.timestampOffset <= currentTimeSeconds)
       .map((evt: RuntimeEvent) => ({
         timestamp: evt.wallClockTime,
@@ -125,6 +163,7 @@ export function deriveWorkflowState(
       id: node.id,
       stepNumber: node.stepNumber,
       name: node.name,
+      visualType: node.visualType,
       status,
       duration,
       durationSeconds: status === 'completed' ? node.expectedDuration : Math.max(currentTimeSeconds - plannedStart, 0),
@@ -142,48 +181,51 @@ export function deriveWorkflowState(
     };
   });
 
-  // 2. Derive Pipe States from adjacent upstream/downstream nodes
+  // 2. Derive pipe states from declared DAG edges and resilience impact.
+  const stageById = new Map(derivedStages.map((stage) => [stage.id, stage]));
+  const impactedIds = new Set(resilienceImpacts.flatMap((impact) => impact.affectedStageIds));
   const derivedPipes: DerivedPipe[] = [];
-  for (let i = 0; i < derivedStages.length - 1; i++) {
-    const upstream = derivedStages[i];
-    const downstream = derivedStages[i + 1];
 
-    let state: PipeVisualState = 'waiting';
-    let hasActivePulse = false;
+  for (const downstreamNode of definition.nodes) {
+    for (const upstreamId of downstreamNode.dependsOn) {
+      const upstream = stageById.get(upstreamId);
+      const downstream = stageById.get(downstreamNode.id);
+      if (!upstream || !downstream) continue;
 
-    if (upstream.status === 'completed' && downstream.status === 'completed') {
-      state = 'completed';
-      hasActivePulse = false;
-    } else if (upstream.status === 'completed' && downstream.status === 'running') {
-      // Data is actively streaming from completed upstream into currently running downstream
-      state = 'completed';
-      hasActivePulse = isRunning;
-    } else if (upstream.status === 'running' && downstream.status === 'waiting') {
-      // Upstream is running, downstream waiting for payload
-      state = 'active-transitional';
-      hasActivePulse = isRunning;
-    } else if (upstream.status === 'completed' && downstream.status === 'waiting') {
-      // Upstream done, handoff in flight
-      state = 'active-transitional';
-      hasActivePulse = isRunning;
-    } else {
-      state = 'waiting';
-      hasActivePulse = false;
+      let state: PipeVisualState = 'waiting';
+      let hasActivePulse = false;
+
+      if (impactedIds.has(upstream.id) || impactedIds.has(downstream.id) ||
+          ['failed', 'blocked', 'retrying', 'fallback'].includes(upstream.status) ||
+          ['failed', 'blocked', 'retrying', 'fallback'].includes(downstream.status)) {
+        state = 'attention';
+      } else if (upstream.status === 'completed' && ['completed', 'recovered'].includes(downstream.status)) {
+        state = 'completed';
+      } else if (upstream.status === 'completed' && downstream.status === 'running') {
+        state = 'completed';
+        hasActivePulse = isRunning;
+      } else if (
+        (upstream.status === 'running' && downstream.status === 'waiting') ||
+        (upstream.status === 'completed' && downstream.status === 'waiting')
+      ) {
+        state = 'active-transitional';
+        hasActivePulse = isRunning;
+      }
+
+      derivedPipes.push({
+        id: `pipe_${upstream.id}_to_${downstream.id}`,
+        fromStageId: upstream.id,
+        toStageId: downstream.id,
+        fromStep: upstream.stepNumber,
+        toStep: downstream.stepNumber,
+        state,
+        hasActivePulse,
+      });
     }
-
-    derivedPipes.push({
-      id: `pipe_${upstream.id}_to_${downstream.id}`,
-      fromStageId: upstream.id,
-      toStageId: downstream.id,
-      fromStep: upstream.stepNumber,
-      toStep: downstream.stepNumber,
-      state,
-      hasActivePulse,
-    });
   }
 
   // 3. Derive Chronological Execution Logs up to current clock
-  const derivedLogs: WorkflowLogEntry[] = definition.eventStream
+  const derivedLogs: WorkflowLogEntry[] = events
     .filter((evt: RuntimeEvent) => evt.timestampOffset <= currentTimeSeconds)
     .map((evt: RuntimeEvent) => ({
       id: evt.id,
@@ -199,17 +241,13 @@ export function deriveWorkflowState(
   const activeStage =
     derivedStages.find((s) => s.id === selectedStageId) || derivedStages[0];
 
-  // 4. Derive Dynamic Telemetry based on active nodes
-  const runningNodes = derivedStages.filter((s) => s.status === 'running');
-  const baseMem = 18.2;
-  const runningMem = runningNodes.length * 24.4;
-  const activeMemoryMb = Number((baseMem + runningMem + (Math.sin(currentTimeSeconds * 2) * 2)).toFixed(1));
-
-  const telemetry: RuntimeTelemetry = {
-    workerThreads: runningNodes.length > 0 ? 4 : 1,
-    activeMemoryMb,
-    peakMemoryLimitMb: 512,
-    cacheHitRatio: 89.4,
+  // 4. Telemetry is supplied by the runtime source.
+  // State derivation does not fabricate measurements.
+  const telemetry: RuntimeTelemetry = runtime.telemetry || {
+    workerThreads: 0,
+    activeMemoryMb: 0,
+    peakMemoryLimitMb: 0,
+    cacheHitRatio: 0,
     bufferDropCount: 0,
   };
 
@@ -239,5 +277,6 @@ export function deriveWorkflowState(
     activeStage,
     telemetry,
     workflowAdapter,
+    resilienceImpacts,
   };
 }

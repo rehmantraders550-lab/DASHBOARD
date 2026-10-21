@@ -9,6 +9,7 @@ import {
   FileSpreadsheet
 } from 'lucide-react';
 import { WorkflowStage, WorkflowLogEntry } from '../types/workflow';
+import type { RuntimeSourceMode } from '../engine/runtimeAdapter';
 import { StageMetricsSparkline } from './StageMetricsSparkline';
 
 interface NodeInspectorProps {
@@ -18,6 +19,7 @@ interface NodeInspectorProps {
   workflowName?: string;
   workflowId?: string;
   allLogs?: WorkflowLogEntry[];
+  runtimeSourceMode?: RuntimeSourceMode;
 }
 
 export const NodeInspector: React.FC<NodeInspectorProps> = ({
@@ -27,6 +29,7 @@ export const NodeInspector: React.FC<NodeInspectorProps> = ({
   workflowName = 'Artwork to Vector',
   workflowId = 'artwork-to-vector',
   allLogs = [],
+  runtimeSourceMode = 'SIMULATED',
 }) => {
   const [exportFormat, setExportFormat] = useState<'json' | 'text'>('json');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -246,6 +249,7 @@ export const NodeInspector: React.FC<NodeInspectorProps> = ({
         <StageMetricsSparkline
           stage={stage}
           isRunningWorkflow={isRunningWorkflow}
+          sourceMode={runtimeSourceMode}
         />
 
         {/* Description */}
