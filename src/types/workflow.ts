@@ -1,3 +1,5 @@
+import type { NodeVisualType } from '../engine/workflowModel';
+
 export type StageStatus = 'completed' | 'running' | 'waiting' | 'failed';
 
 export interface StageDependency {
@@ -15,6 +17,7 @@ export interface WorkflowStage {
   id: string;
   stepNumber: string; // e.g. "01"
   name: string; // e.g. "Intake"
+  visualType?: NodeVisualType;
   status: StageStatus;
   duration: string; // e.g. "0.3s"
   durationSeconds: number;
