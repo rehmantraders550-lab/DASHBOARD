@@ -8,6 +8,8 @@ import { ExecutionView } from './components/views/ExecutionView';
 import { DependenciesView } from './components/views/DependenciesView';
 import { SimulationView } from './components/views/SimulationView';
 import { INITIAL_WORKFLOWS } from './data/mockWorkflows';
+import { STATIC_PIPELINES } from './engine/pipelineDefinitions';
+import { deriveWorkflowState } from './engine/stateDerivation';
 
 export default function App() {
   const [workflows] = useState(INITIAL_WORKFLOWS);
@@ -20,23 +22,38 @@ export default function App() {
   const [isInspectorOpen, setIsInspectorOpen] = useState<boolean>(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
 
-  const activeWorkflow = workflows.find((w) => w.id === activeWorkflowId) || workflows[0];
+  // 1. Static Workflow Definition Lookup
+  const activePipelineDef =
+    STATIC_PIPELINES.find((p) => p.id === activeWorkflowId) || STATIC_PIPELINES[0];
 
-  // Active stage for inspector
-  const currentStage = activeWorkflow.stages.find((s) => s.id === selectedStageId) || activeWorkflow.stages[0];
+  // 2. STATE DERIVATION LAYER
+  // (Workflow Definition + Runtime Events + Execution State + Telemetry)
+  //                          ↓
+  //                State Derivation Layer
+  //                          ↓
+  //              [Nodes, Pipes, Timeline, Logs]
+  const derived = deriveWorkflowState(
+    activePipelineDef,
+    currentTime,
+    isRunning,
+    selectedStageId
+  );
 
-  // Subtle live simulation timer
+  const activeWorkflow = derived.workflowAdapter;
+  const currentStage = derived.activeStage;
+
+  // Real-time execution clock driver
   useEffect(() => {
     if (!isRunning) return;
 
     const interval = setInterval(() => {
       setCurrentTime((prev) => {
         const next = prev + 0.05 * simSpeed;
-        // Loop gracefully or pause when reaching projected end
-        if (next > 2.4) {
-          return 1.4; // Loop back to 1.4s to maintain live view match
+        // Loop gracefully or pause when reaching projected pipeline end
+        if (next > 4.8) {
+          return 1.4; // Return to 1.4s reference state for ongoing visualizer demo
         }
-        return next;
+        return Number(next.toFixed(2));
       });
     }, 100);
 
@@ -48,13 +65,13 @@ export default function App() {
   };
 
   const handleResetSimulation = () => {
-    setCurrentTime(1.4);
-    setSelectedStageId('vectorize');
+    setCurrentTime(activePipelineDef.defaultTimeSeconds || 1.4);
+    setSelectedStageId(activePipelineDef.nodes[2]?.id || activePipelineDef.nodes[0].id);
     setIsInspectorOpen(true);
   };
 
   const handleStepForward = () => {
-    setCurrentTime((prev) => Math.min(prev + 0.2, 5.0));
+    setCurrentTime((prev) => Math.min(Number((prev + 0.2).toFixed(2)), 4.8));
   };
 
   const handleSelectStage = (stageId: string) => {
@@ -64,10 +81,10 @@ export default function App() {
 
   const handleSelectWorkflow = (wfId: string) => {
     setActiveWorkflowId(wfId);
-    const targetWf = workflows.find((w) => w.id === wfId);
-    if (targetWf) {
-      setSelectedStageId(targetWf.selectedStageId || targetWf.stages[0].id);
-      setCurrentTime(targetWf.currentTimeSeconds);
+    const targetPipeline = STATIC_PIPELINES.find((p) => p.id === wfId);
+    if (targetPipeline) {
+      setCurrentTime(targetPipeline.defaultTimeSeconds || 1.0);
+      setSelectedStageId(targetPipeline.nodes[0].id);
     }
   };
 
@@ -105,6 +122,7 @@ export default function App() {
                 onSelectStage={handleSelectStage}
                 isRunningWorkflow={isRunning}
                 currentTime={currentTime}
+                pipes={derived.pipes}
               />
             </div>
 

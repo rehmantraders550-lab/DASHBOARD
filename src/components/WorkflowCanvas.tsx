@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronRight, Search, Maximize2, Minimize2, ChevronDown, Sparkles } from 'lucide-react';
 import { WorkflowDefinition } from '../types/workflow';
+import { DerivedPipe } from '../engine/stateDerivation';
 import { WorkflowCard } from './WorkflowCard';
 import { WorkflowConnector } from './WorkflowConnectors';
 import { ExecutionTimeline } from './ExecutionTimeline';
@@ -12,6 +13,7 @@ interface WorkflowCanvasProps {
   onSelectStage: (stageId: string) => void;
   isRunningWorkflow: boolean;
   currentTime: number;
+  pipes?: DerivedPipe[];
 }
 
 export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
@@ -20,6 +22,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
   onSelectStage,
   isRunningWorkflow,
   currentTime,
+  pipes,
 }) => {
   const [bottomTab, setBottomTab] = useState<'Timeline' | 'Logs'>('Timeline');
   const [zoomLevel, setZoomLevel] = useState<number>(100);
@@ -32,13 +35,28 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
     else setZoomLevel(100);
   };
 
-  const getConnectorState = (index: number) => {
-    // Stage indices:
-    // 0: Intake, 1: Analyze, 2: Vectorize, 3: Validate, 4: Export
-    if (index === 0) return 'completed'; // 01 -> 02
-    if (index === 1) return 'completed'; // 02 -> 03
-    if (index === 2) return 'active-transitional'; // 03 -> 04
-    return 'waiting'; // 04 -> 05
+  // State Derivation Layer: dynamically derive connector state from node execution states
+  const getConnectorState = (index: number): 'completed' | 'active-transitional' | 'waiting' => {
+    if (pipes && pipes[index]) {
+      return pipes[index].state;
+    }
+    const current = workflow.stages[index];
+    const next = workflow.stages[index + 1];
+    if (!next) return 'waiting';
+
+    if (current.status === 'completed' && next.status === 'completed') {
+      return 'completed';
+    }
+    if (current.status === 'completed' && next.status === 'running') {
+      return 'completed';
+    }
+    if (current.status === 'running' && next.status === 'waiting') {
+      return 'active-transitional';
+    }
+    if (current.status === 'completed' && next.status === 'waiting') {
+      return 'active-transitional';
+    }
+    return 'waiting';
   };
 
   return (
