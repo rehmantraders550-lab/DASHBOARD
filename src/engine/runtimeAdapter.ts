@@ -37,6 +37,18 @@ export class SimulatedRuntimeEventSource implements RuntimeEventSource {
     currentTimeSeconds: number,
     isRunning: boolean
   ): RuntimeSnapshot {
+    const activeNodes = definition.nodes.filter(
+      (node) =>
+        currentTimeSeconds >= node.plannedStart &&
+        currentTimeSeconds < node.plannedStart + node.expectedDuration
+    );
+    const activeMemoryMb = Number(
+      (
+        18.2 +
+        activeNodes.reduce((sum, node) => sum + node.baseMemProfile.runningBase, 0)
+      ).toFixed(1)
+    );
+
     return {
       mode: this.mode,
       pipelineId: definition.id,
@@ -45,6 +57,13 @@ export class SimulatedRuntimeEventSource implements RuntimeEventSource {
       events: definition.eventStream
         .filter((event) => event.timestampOffset <= currentTimeSeconds)
         .sort((a, b) => a.timestampOffset - b.timestampOffset),
+      telemetry: {
+        workerThreads: activeNodes.length > 0 ? 4 : 1,
+        activeMemoryMb,
+        peakMemoryLimitMb: 512,
+        cacheHitRatio: 89.4,
+        bufferDropCount: 0,
+      },
     };
   }
 }
