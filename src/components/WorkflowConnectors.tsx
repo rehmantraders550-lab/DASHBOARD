@@ -1,9 +1,10 @@
 import React from 'react';
+import type { PipeVisualState } from '../engine/stateDerivation';
 
 interface WorkflowConnectorProps {
   fromStep: string;
   toStep: string;
-  state: 'completed' | 'active-transitional' | 'waiting';
+  state: PipeVisualState;
   isRunningWorkflow: boolean;
 }
 
@@ -66,6 +67,18 @@ export const WorkflowConnector: React.FC<WorkflowConnectorProps> = ({
 
           {/* Right anchor dot */}
           <circle cx={endX} cy={centerY} r="4.5" fill="#F97316" />
+        </svg>
+      </div>
+    );
+  }
+
+  if (state === 'attention') {
+    return (
+      <div className="relative w-10 sm:w-14 md:w-16 h-48 sm:h-52 flex items-center justify-center shrink-0">
+        <svg className="w-full h-full overflow-visible" viewBox={`0 0 ${width} ${height}`} fill="none">
+          <path d={pathD} stroke="#B45309" strokeWidth="3" strokeDasharray="7 7" strokeLinecap="round" />
+          <circle cx={startX} cy={centerY} r="4.5" fill="#B45309" />
+          <circle cx={endX} cy={centerY} r="4.5" fill="#F7F4EE" stroke="#B45309" strokeWidth="2.5" />
         </svg>
       </div>
     );
