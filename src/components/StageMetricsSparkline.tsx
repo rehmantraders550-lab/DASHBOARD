@@ -12,6 +12,7 @@ interface MetricPoint {
 interface StageMetricsSparklineProps {
   stage: WorkflowStage;
   isRunningWorkflow: boolean;
+  sourceMode?: 'SIMULATED' | 'RECORDED' | 'LIVE';
 }
 
 // Generate realistic baseline profile based on stage identity and status
@@ -42,6 +43,7 @@ function generateInitialPoints(stage: WorkflowStage): MetricPoint[] {
 export const StageMetricsSparkline: React.FC<StageMetricsSparklineProps> = ({
   stage,
   isRunningWorkflow,
+  sourceMode = 'SIMULATED',
 }) => {
   const [metricType, setMetricType] = useState<'cpu' | 'memory' | 'both'>('both');
   const [data, setData] = useState<MetricPoint[]>(() => generateInitialPoints(stage));
@@ -172,7 +174,7 @@ export const StageMetricsSparkline: React.FC<StageMetricsSparklineProps> = ({
       {/* Section Header */}
       <div className="flex items-center justify-between">
         <h4 className="text-xs font-semibold text-[#242628] tracking-wider uppercase">
-          Real-Time Metrics (30s)
+          {sourceMode === 'LIVE' ? 'Real-Time Metrics (30s)' : `${sourceMode} Metrics (30s)`}
         </h4>
 
         {/* View Toggle */}
@@ -259,7 +261,7 @@ export const StageMetricsSparkline: React.FC<StageMetricsSparklineProps> = ({
               : 'Window: last 30s'}
           </span>
           <span className="text-[9px] uppercase tracking-wider text-[#8E8B85]">
-            Live Trace
+            {sourceMode === 'LIVE' ? 'Live Trace' : `${sourceMode} Trace`}
           </span>
         </div>
 
