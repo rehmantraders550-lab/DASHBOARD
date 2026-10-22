@@ -78,7 +78,7 @@ export const WorkflowCard: React.FC<WorkflowCardProps> = ({
           onSelect();
         }
       }}
-      className={`relative select-none cursor-pointer w-36 sm:w-40 md:w-44 h-48 sm:h-52 rounded-2xl p-5 flex flex-col justify-between transition-all duration-200 focus:outline-hidden ${
+      className={`relative select-none cursor-pointer shrink-0 w-[128px] xl:w-[136px] h-[188px] sm:h-[192px] rounded-2xl p-4 flex flex-col justify-between transition-all duration-200 focus:outline-hidden ${
         isSelected
           ? 'bg-[#FFF8F3] border-2 border-[#F97316] shadow-[0_4px_24px_rgba(249,115,22,0.18)] scale-[1.02] z-10'
           : isResilience
@@ -93,7 +93,7 @@ export const WorkflowCard: React.FC<WorkflowCardProps> = ({
         <span className="text-[11px] font-mono font-medium text-[#737373] tracking-wider block">
           {stage.stepNumber}
         </span>
-        <h3 className="font-editorial text-xl sm:text-[22px] font-medium text-[#242628] leading-tight mt-0.5">
+        <h3 className="font-editorial text-xl sm:text-[21px] font-medium text-[#242628] leading-tight mt-0.5">
           {stage.name}
         </h3>
       </div>

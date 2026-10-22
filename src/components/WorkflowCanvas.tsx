@@ -64,7 +64,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
 
   return (
     <div
-      className={`flex-1 flex flex-col justify-between p-4 sm:p-6 lg:p-8 overflow-y-auto space-y-6 ${
+      className={`flex-1 min-h-0 flex flex-col gap-8 p-4 sm:p-6 lg:p-8 overflow-y-auto ${
         isFullscreen ? 'fixed inset-0 z-50 bg-[#F7F4EE] overflow-auto' : ''
       }`}
     >
@@ -115,7 +115,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
       </div>
 
       {/* Main Workflow Pipeline Canvas */}
-      <div className="w-full overflow-x-auto py-4 px-2">
+      <div className="w-full shrink-0 overflow-x-auto overflow-y-hidden px-2 pt-6 pb-6 [scrollbar-gutter:stable]">
         <div
           className="flex items-center justify-start xl:justify-center min-w-max mx-auto transition-transform duration-200"
           style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: 'center center' }}
@@ -150,7 +150,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
       </div>
 
       {/* Bottom Timeline & Logs Card */}
-      <div className="bg-white rounded-2xl border border-[#E5E1DA] p-5 shadow-xs transition-all">
+      <div className="shrink-0 bg-white rounded-2xl border border-[#E5E1DA] p-5 shadow-xs transition-all">
         {/* Card Header with Tabs & Live pill */}
         <div className="flex items-center justify-between pb-3 border-b border-[#EDE8E0]">
           {/* Tabs */}

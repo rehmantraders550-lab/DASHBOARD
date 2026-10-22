@@ -32,7 +32,7 @@ export const WorkflowConnector: React.FC<WorkflowConnectorProps> = ({
 
   if (state === 'completed') {
     return (
-      <div className="relative w-10 sm:w-14 md:w-16 h-48 sm:h-52 flex items-center justify-center shrink-0">
+      <div className="relative w-10 sm:w-11 xl:w-12 h-[188px] sm:h-[192px] flex items-center justify-center shrink-0">
         <svg
           className="w-full h-full overflow-visible"
           viewBox={`0 0 ${width} ${height}`}
@@ -74,7 +74,7 @@ export const WorkflowConnector: React.FC<WorkflowConnectorProps> = ({
 
   if (state === 'attention') {
     return (
-      <div className="relative w-10 sm:w-14 md:w-16 h-48 sm:h-52 flex items-center justify-center shrink-0">
+      <div className="relative w-10 sm:w-11 xl:w-12 h-[188px] sm:h-[192px] flex items-center justify-center shrink-0">
         <svg className="w-full h-full overflow-visible" viewBox={`0 0 ${width} ${height}`} fill="none">
           <path d={pathD} stroke="#B45309" strokeWidth="3" strokeDasharray="7 7" strokeLinecap="round" />
           <circle cx={startX} cy={centerY} r="4.5" fill="#B45309" />
@@ -87,7 +87,7 @@ export const WorkflowConnector: React.FC<WorkflowConnectorProps> = ({
   if (state === 'active-transitional') {
     // Vectorize to Validate: starts orange, mid dot, then turns muted gray
     return (
-      <div className="relative w-10 sm:w-14 md:w-16 h-48 sm:h-52 flex items-center justify-center shrink-0">
+      <div className="relative w-10 sm:w-11 xl:w-12 h-[188px] sm:h-[192px] flex items-center justify-center shrink-0">
         <svg
           className="w-full h-full overflow-visible"
           viewBox={`0 0 ${width} ${height}`}
@@ -125,7 +125,7 @@ export const WorkflowConnector: React.FC<WorkflowConnectorProps> = ({
 
   // Waiting / Inactive state: muted gray pipe
   return (
-    <div className="relative w-10 sm:w-14 md:w-16 h-48 sm:h-52 flex items-center justify-center shrink-0">
+    <div className="relative w-10 sm:w-11 xl:w-12 h-[188px] sm:h-[192px] flex items-center justify-center shrink-0">
       <svg
         className="w-full h-full overflow-visible"
         viewBox={`0 0 ${width} ${height}`}
