@@ -149,15 +149,7 @@ export function deriveWorkflowState(
       }));
 
     // If no events have elapsed yet for waiting node, show initialization trace
-    const recentEvents =
-      nodeEvents.length > 0
-        ? nodeEvents
-        : [
-            {
-              timestamp: '14:21:05',
-              message: `${node.name} harness ready and registered in DAG`,
-            },
-          ];
+    const recentEvents = nodeEvents;
 
     return {
       id: node.id,

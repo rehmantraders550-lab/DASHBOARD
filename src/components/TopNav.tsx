@@ -1,4 +1,5 @@
 import React from 'react';
+import type { RuntimeSourceMode } from '../engine/runtimeAdapter';
 import { Menu, Square, Play, RotateCcw } from 'lucide-react';
 
 export type NavTab = 'Live Map' | 'Code' | 'Execution' | 'Dependencies' | 'Simulation';
@@ -7,6 +8,7 @@ interface TopNavProps {
   activeTab: NavTab;
   onSelectTab: (tab: NavTab) => void;
   isRunning: boolean;
+  runtimeMode: RuntimeSourceMode;
   onToggleRunning: () => void;
   onResetSimulation?: () => void;
   onOpenMobileSidebar: () => void;
@@ -16,6 +18,7 @@ export const TopNav: React.FC<TopNavProps> = ({
   activeTab,
   onSelectTab,
   isRunning,
+  runtimeMode,
   onToggleRunning,
   onResetSimulation,
   onOpenMobileSidebar,
@@ -66,7 +69,7 @@ export const TopNav: React.FC<TopNavProps> = ({
             }`}
           />
           <span className="font-medium text-[#242628] hidden sm:inline">
-            {isRunning ? 'Workflow Running' : 'Workflow Paused'}
+            {runtimeMode === 'RECORDED' ? (isRunning ? 'Recorded Replay' : 'Replay Paused') : (isRunning ? 'Simulation Running' : 'Simulation Paused')}
           </span>
         </div>
 

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ChevronRight, Search, Maximize2, Minimize2, ChevronDown, Sparkles } from 'lucide-react';
 import { WorkflowDefinition } from '../types/workflow';
 import { DerivedPipe } from '../engine/stateDerivation';
+import type { RuntimeSourceMode } from '../engine/runtimeAdapter';
 import { WorkflowCard } from './WorkflowCard';
 import { WorkflowConnector } from './WorkflowConnectors';
 import { ExecutionTimeline } from './ExecutionTimeline';
@@ -14,6 +15,7 @@ interface WorkflowCanvasProps {
   isRunningWorkflow: boolean;
   currentTime: number;
   pipes?: DerivedPipe[];
+  runtimeMode: RuntimeSourceMode;
 }
 
 export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
@@ -23,6 +25,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
   isRunningWorkflow,
   currentTime,
   pipes,
+  runtimeMode,
 }) => {
   const [bottomTab, setBottomTab] = useState<'Timeline' | 'Logs'>('Timeline');
   const [zoomLevel, setZoomLevel] = useState<number>(100);
@@ -194,7 +197,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                   : 'bg-[#9CA3AF]'
               }`}
             />
-            <span>Live</span>
+            <span>{runtimeMode === 'RECORDED' ? 'Replay' : 'Simulation'}</span>
             <ChevronDown className="w-3 h-3 text-[#8E8B85]" />
           </button>
         </div>

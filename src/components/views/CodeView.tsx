@@ -29,7 +29,7 @@ export const CodeView: React.FC<CodeViewProps> = ({ workflow }) => {
             {workflow.name} — Source Code
           </h1>
           <p className="text-sm text-[#737373] mt-0.5">
-            Compiled TypeScript DAG executed by Orvia Runtime Engine.
+            Reference pipeline specification. These examples are not executed by this dashboard.
           </p>
         </div>
 

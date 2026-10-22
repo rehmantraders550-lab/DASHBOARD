@@ -21,8 +21,8 @@ interface SidebarProps {
   onSelectWorkflow: (id: string) => void;
   isOpenMobile: boolean;
   onCloseMobile: () => void;
-  activeNavTab?: string;
-  onNavigateTab?: (tab: string) => void;
+  onSelectUtilityPage: (page: 'Integrations' | 'Settings' | null) => void;
+  activeUtilityPage: 'Integrations' | 'Settings' | null;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -31,6 +31,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectWorkflow,
   isOpenMobile,
   onCloseMobile,
+  onSelectUtilityPage,
+  activeUtilityPage,
 }) => {
   const getWorkflowIcon = (id: string, isActive: boolean) => {
     switch (id) {
@@ -125,7 +127,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Secondary Navigation */}
           <div className="px-3 space-y-1">
             <button
-              onClick={() => alert('Repository: Connected to github.com/orvia-core/vector-pipeline (main branch)')}
+              onClick={() => { window.open('https://github.com/rehmantraders550-lab/DASHBOARD', '_blank', 'noopener,noreferrer'); onCloseMobile(); }}
               className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-[#A3A7AC] hover:text-white hover:bg-[#282A2D] transition-colors text-left"
             >
               <div className="w-7 h-7 rounded-md bg-[#282A2D] flex items-center justify-center shrink-0">
@@ -135,23 +137,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </button>
 
             <button
-              onClick={() => alert('Integrations: 3 Active (resvg-native, wasm-runtime, cloud-worker)')}
+              onClick={() => { onSelectUtilityPage('Integrations'); onCloseMobile(); }}
               className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-[#A3A7AC] hover:text-white hover:bg-[#282A2D] transition-colors text-left"
             >
               <div className="w-7 h-7 rounded-md bg-[#282A2D] flex items-center justify-center shrink-0">
                 <Link2 className="w-4 h-4 text-[#8E9296]" />
               </div>
-              <span>Integrations</span>
+              <span className={activeUtilityPage === 'Integrations' ? 'text-[#F97316]' : ''}>Integrations</span>
             </button>
 
             <button
-              onClick={() => alert('Settings: Execution timeout: 30s, Memory limit: 512MB, Auto-retry: enabled')}
+              onClick={() => { onSelectUtilityPage('Settings'); onCloseMobile(); }}
               className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-[#A3A7AC] hover:text-white hover:bg-[#282A2D] transition-colors text-left"
             >
               <div className="w-7 h-7 rounded-md bg-[#282A2D] flex items-center justify-center shrink-0">
                 <Settings className="w-4 h-4 text-[#8E9296]" />
               </div>
-              <span>Settings</span>
+              <span className={activeUtilityPage === 'Settings' ? 'text-[#F97316]' : ''}>Settings</span>
             </button>
           </div>
         </div>

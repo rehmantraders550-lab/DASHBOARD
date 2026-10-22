@@ -1,13 +1,17 @@
 import React from 'react';
 import { Activity, Cpu, HardDrive, Zap, CheckCircle2, Clock } from 'lucide-react';
 import { WorkflowDefinition } from '../../types/workflow';
+import type { RuntimeTelemetry } from '../../engine/workflowModel';
+import type { RuntimeSourceMode } from '../../engine/runtimeAdapter';
 
 interface ExecutionViewProps {
   workflow: WorkflowDefinition;
   currentTime: number;
+  telemetry: RuntimeTelemetry;
+  runtimeMode: RuntimeSourceMode;
 }
 
-export const ExecutionView: React.FC<ExecutionViewProps> = ({ workflow, currentTime }) => {
+export const ExecutionView: React.FC<ExecutionViewProps> = ({ workflow, currentTime, telemetry, runtimeMode }) => {
   return (
     <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 overflow-y-auto">
       <div>
@@ -19,7 +23,7 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({ workflow, currentT
           Execution Metrics
         </h1>
         <p className="text-sm text-[#737373] mt-0.5">
-          Real-time resource utilization and latency profiling for {workflow.name}.
+          {runtimeMode === 'SIMULATED' ? 'Simulated resource estimates' : 'Recorded event data'} for {workflow.name}. Not a live compute monitor.
         </p>
       </div>
 
@@ -34,7 +38,7 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({ workflow, currentT
             {currentTime.toFixed(1)}s
           </div>
           <div className="text-[11px] text-[#737373] mt-1">
-            Target deadline: 5.0s
+            Configured demonstration timeline: {workflow.maxTimelineSeconds.toFixed(1)}s
           </div>
         </div>
 
@@ -44,10 +48,10 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({ workflow, currentT
             <HardDrive className="w-4 h-4 text-[#F97316]" />
           </div>
           <div className="font-mono text-2xl font-semibold text-[#242628] mt-2">
-            42.6 MB
+            {telemetry.activeMemoryMb.toFixed(1)} MB
           </div>
           <div className="text-[11px] text-[#737373] mt-1">
-            Peak allocation limit: 512 MB
+            Configured limit: {telemetry.peakMemoryLimitMb} MB
           </div>
         </div>
 
@@ -57,10 +61,10 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({ workflow, currentT
             <Cpu className="w-4 h-4 text-[#F97316]" />
           </div>
           <div className="font-mono text-2xl font-semibold text-[#242628] mt-2">
-            34.2%
+            {telemetry.workerThreads} thread{telemetry.workerThreads === 1 ? '' : 's'}
           </div>
           <div className="text-[11px] text-[#737373] mt-1">
-            4 SIMD-vector cores active
+            {runtimeMode === 'SIMULATED' ? 'Estimated activity, not measured' : 'Trace-supplied activity'}
           </div>
         </div>
 
@@ -70,10 +74,10 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({ workflow, currentT
             <Zap className="w-4 h-4 text-[#F97316]" />
           </div>
           <div className="font-mono text-2xl font-semibold text-[#242628] mt-2">
-            89.4%
+            {telemetry.cacheHitRatio.toFixed(1)}%
           </div>
           <div className="text-[11px] text-[#16A34A] mt-1 font-medium">
-            +4.2% vs unoptimized baseline
+            {runtimeMode === 'SIMULATED' ? 'Simulated cache ratio' : 'Reported by trace'}
           </div>
         </div>
       </div>

@@ -10,7 +10,9 @@ import { SimulationView } from './components/views/SimulationView';
 import { INITIAL_WORKFLOWS } from './data/mockWorkflows';
 import { STATIC_PIPELINES } from './engine/pipelineDefinitions';
 import { deriveWorkflowState } from './engine/stateDerivation';
-import { simulatedRuntimeSource } from './engine/runtimeAdapter';
+import { simulatedRuntimeSource, RecordedRuntimeEventSource } from './engine/runtimeAdapter';
+import type { RecordedRuntimeTrace, RuntimeSourceMode } from './engine/runtimeAdapter';
+import { OperationsPanel } from './components/OperationsPanel';
 import { createResilienceEvent, RESILIENCE_SCENARIOS, ResilienceScenarioKind } from './engine/resilience';
 import type { RuntimeEvent } from './engine/workflowModel';
 
@@ -25,6 +27,9 @@ export default function App() {
   const [isInspectorOpen, setIsInspectorOpen] = useState<boolean>(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
   const [injectedEvents, setInjectedEvents] = useState<RuntimeEvent[]>([]);
+  const [utilityPage, setUtilityPage] = useState<'Integrations' | 'Settings' | null>(null);
+  const [recordedTrace, setRecordedTrace] = useState<RecordedRuntimeTrace | null>(null);
+  const [runtimeMode, setRuntimeMode] = useState<RuntimeSourceMode>('SIMULATED');
 
   // 1. Static Workflow Definition Lookup
   const activePipelineDef =
@@ -32,11 +37,10 @@ export default function App() {
 
   // 2. NORMALIZED RUNTIME ADAPTER
   // Simulated today; recorded/live providers can implement the same contract.
-  const runtimeSnapshot = simulatedRuntimeSource.getSnapshot(
-    activePipelineDef,
-    currentTime,
-    isRunning
-  );
+  const runtimeSource = runtimeMode === 'RECORDED' && recordedTrace
+    ? new RecordedRuntimeEventSource(recordedTrace)
+    : simulatedRuntimeSource;
+  const runtimeSnapshot = runtimeSource.getSnapshot(activePipelineDef, currentTime, isRunning);
   runtimeSnapshot.injectedEvents = injectedEvents;
 
   // 3. STATE DERIVATION LAYER
@@ -58,15 +62,18 @@ export default function App() {
       setCurrentTime((prev) => {
         const next = prev + 0.05 * simSpeed;
         // Loop gracefully or pause when reaching projected pipeline end
-        if (next > activePipelineDef.maxTimelineSeconds) {
-          return activePipelineDef.defaultTimeSeconds; // Return to 1.4s reference state for ongoing visualizer demo
+        const playbackEnd = runtimeMode === 'RECORDED' && recordedTrace
+          ? Math.max(activePipelineDef.maxTimelineSeconds, ...recordedTrace.events.map(event => event.timestampOffset))
+          : activePipelineDef.maxTimelineSeconds;
+        if (next > playbackEnd) {
+          return runtimeMode === 'RECORDED' ? 0 : activePipelineDef.defaultTimeSeconds;
         }
         return Number(next.toFixed(2));
       });
     }, 100);
 
     return () => clearInterval(interval);
-  }, [isRunning, simSpeed, activePipelineDef]);
+  }, [isRunning, simSpeed, activePipelineDef, runtimeMode, recordedTrace]);
 
   const handleToggleRunning = () => {
     setIsRunning((prev) => !prev);
@@ -100,13 +107,35 @@ export default function App() {
   };
 
   const handleSelectWorkflow = (wfId: string) => {
+    setUtilityPage(null);
     setActiveWorkflowId(wfId);
+    setRuntimeMode('SIMULATED');
+    setRecordedTrace(null);
     const targetPipeline = STATIC_PIPELINES.find((p) => p.id === wfId);
     if (targetPipeline) {
       setCurrentTime(targetPipeline.defaultTimeSeconds || 1.0);
       setSelectedStageId(targetPipeline.nodes[0].id);
       setInjectedEvents([]);
     }
+  };
+
+  const handleLoadTrace = (trace: RecordedRuntimeTrace) => {
+    setRecordedTrace(trace);
+    setRuntimeMode('RECORDED');
+    setInjectedEvents([]);
+    setCurrentTime(0);
+    setSelectedStageId(activePipelineDef.nodes[0].id);
+    setIsRunning(false);
+    setUtilityPage(null);
+    setActiveNavTab('Live Map');
+  };
+
+  const handleUseSimulation = () => {
+    setRuntimeMode('SIMULATED');
+    setRecordedTrace(null);
+    setInjectedEvents([]);
+    setCurrentTime(activePipelineDef.defaultTimeSeconds);
+    setIsRunning(false);
   };
 
   return (
@@ -118,6 +147,8 @@ export default function App() {
         onSelectWorkflow={handleSelectWorkflow}
         isOpenMobile={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
+        onSelectUtilityPage={setUtilityPage}
+        activeUtilityPage={utilityPage}
       />
 
       {/* Main Content Viewport */}
@@ -125,15 +156,29 @@ export default function App() {
         {/* 2. Top Navigation */}
         <TopNav
           activeTab={activeNavTab}
-          onSelectTab={setActiveNavTab}
+          onSelectTab={(tab) => { setActiveNavTab(tab); setUtilityPage(null); }}
           isRunning={isRunning}
+          runtimeMode={runtimeMode}
           onToggleRunning={handleToggleRunning}
           onResetSimulation={handleResetSimulation}
           onOpenMobileSidebar={() => setIsMobileSidebarOpen(true)}
         />
 
         {/* Dynamic Main Body Content */}
-        {activeNavTab === 'Live Map' && (
+        {utilityPage && (
+          <OperationsPanel
+            page={utilityPage}
+            definition={activePipelineDef}
+            runtimeMode={runtimeMode}
+            simSpeed={simSpeed}
+            onChangeSpeed={setSimSpeed}
+            onLoadTrace={handleLoadTrace}
+            onUseSimulation={handleUseSimulation}
+            onReset={handleResetSimulation}
+            onNavigateToMap={() => { setUtilityPage(null); setActiveNavTab('Live Map'); }}
+          />
+        )}
+        {!utilityPage && activeNavTab === 'Live Map' && (
           <main className="flex-1 flex flex-col lg:flex-row overflow-hidden p-4 sm:p-6 gap-6 min-w-0">
             {/* 3. Main Workflow Canvas */}
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#F7F4EE]">
@@ -144,6 +189,7 @@ export default function App() {
                 isRunningWorkflow={isRunning}
                 currentTime={currentTime}
                 pipes={derived.pipes}
+                runtimeMode={runtimeMode}
               />
             </div>
 
@@ -162,19 +208,19 @@ export default function App() {
           </main>
         )}
 
-        {activeNavTab === 'Code' && (
+        {!utilityPage && activeNavTab === 'Code' && (
           <CodeView workflow={activeWorkflow} />
         )}
 
-        {activeNavTab === 'Execution' && (
-          <ExecutionView workflow={activeWorkflow} currentTime={currentTime} />
+        {!utilityPage && activeNavTab === 'Execution' && (
+          <ExecutionView workflow={activeWorkflow} currentTime={currentTime} telemetry={derived.telemetry} runtimeMode={runtimeMode} />
         )}
 
-        {activeNavTab === 'Dependencies' && (
+        {!utilityPage && activeNavTab === 'Dependencies' && (
           <DependenciesView workflow={activeWorkflow} />
         )}
 
-        {activeNavTab === 'Simulation' && (
+        {!utilityPage && activeNavTab === 'Simulation' && (
           <SimulationView
             workflow={activeWorkflow}
             isRunning={isRunning}
