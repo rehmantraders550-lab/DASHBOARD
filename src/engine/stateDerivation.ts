@@ -88,6 +88,7 @@ export function deriveWorkflowState(
     );
     const inputReady = node.dependsOn.length === 0 || dependenciesSatisfied;
     const nodeCompleted = completedStageIds.has(node.id);
+    const liveStarted = runtime.mode === 'LIVE' && events.some(e => e.stageId === node.id && e.type === 'STAGE_START');
     const resilienceState = resilienceByStage.get(node.id);
 
     if (resilienceState && resilienceState !== 'recovered') {
@@ -102,9 +103,10 @@ export function deriveWorkflowState(
       status = 'completed';
       duration = `${node.expectedDuration.toFixed(1)}s`;
       progressPercent = 100;
-    } else if (inputReady && currentTimeSeconds >= plannedStart && currentTimeSeconds < plannedEnd) {
+    } else if (inputReady && ((runtime.mode === 'LIVE' && liveStarted) || (runtime.mode !== 'LIVE' && currentTimeSeconds >= plannedStart && currentTimeSeconds < plannedEnd))) {
       status = 'running';
-      const elapsed = Math.max(currentTimeSeconds - plannedStart, 0.1);
+      const startEvent = runtime.mode === 'LIVE' ? events.find(e => e.stageId === node.id && e.type === 'STAGE_START') : undefined;
+      const elapsed = runtime.mode === 'LIVE' ? Math.max(currentTimeSeconds-(startEvent?.timestampOffset || 0),0) : Math.max(currentTimeSeconds - plannedStart, 0.1);
       duration = `${elapsed.toFixed(1)}s`;
       progressPercent = Math.min(
         Math.max(Math.round((elapsed / node.expectedDuration) * 100), 5),

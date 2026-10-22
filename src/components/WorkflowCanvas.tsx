@@ -197,7 +197,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                   : 'bg-[#9CA3AF]'
               }`}
             />
-            <span>{runtimeMode === 'RECORDED' ? 'Replay' : 'Simulation'}</span>
+            <span>{runtimeMode === 'LIVE' ? 'Backend' : runtimeMode === 'RECORDED' ? 'Replay' : 'Simulation'}</span>
             <ChevronDown className="w-3 h-3 text-[#8E8B85]" />
           </button>
         </div>

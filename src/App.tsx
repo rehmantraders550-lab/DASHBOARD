@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { LiveRunPanel } from './components/LiveRunPanel';
 import { Sidebar } from './components/Sidebar';
 import { TopNav, NavTab } from './components/TopNav';
 import { WorkflowCanvas } from './components/WorkflowCanvas';
@@ -10,7 +11,7 @@ import { SimulationView } from './components/views/SimulationView';
 import { INITIAL_WORKFLOWS } from './data/mockWorkflows';
 import { STATIC_PIPELINES } from './engine/pipelineDefinitions';
 import { deriveWorkflowState } from './engine/stateDerivation';
-import { simulatedRuntimeSource, RecordedRuntimeEventSource } from './engine/runtimeAdapter';
+import { simulatedRuntimeSource, RecordedRuntimeEventSource, LiveRuntimeEventSource } from './engine/runtimeAdapter';
 import type { RecordedRuntimeTrace, RuntimeSourceMode } from './engine/runtimeAdapter';
 import { OperationsPanel } from './components/OperationsPanel';
 import { createResilienceEvent, RESILIENCE_SCENARIOS, ResilienceScenarioKind } from './engine/resilience';
@@ -30,6 +31,10 @@ export default function App() {
   const [utilityPage, setUtilityPage] = useState<'Integrations' | 'Settings' | null>(null);
   const [recordedTrace, setRecordedTrace] = useState<RecordedRuntimeTrace | null>(null);
   const [runtimeMode, setRuntimeMode] = useState<RuntimeSourceMode>('SIMULATED');
+  const [liveEvents, setLiveEvents] = useState<RuntimeEvent[]>([]);
+  const [liveTime, setLiveTime] = useState(0);
+  const [liveRunning, setLiveRunning] = useState(false);
+  const [liveTelemetry, setLiveTelemetry] = useState({workerThreads:0,activeMemoryMb:0,peakMemoryLimitMb:0,cacheHitRatio:0,bufferDropCount:0});
 
   // 1. Static Workflow Definition Lookup
   const activePipelineDef =
@@ -37,7 +42,9 @@ export default function App() {
 
   // 2. NORMALIZED RUNTIME ADAPTER
   // Simulated today; recorded/live providers can implement the same contract.
-  const runtimeSource = runtimeMode === 'RECORDED' && recordedTrace
+  const runtimeSource = runtimeMode === 'LIVE'
+    ? new LiveRuntimeEventSource({pipelineId:activePipelineDef.id,getEvents:()=>liveEvents,getTelemetry:()=>liveTelemetry,getCurrentTimeSeconds:()=>liveTime,isRunning:()=>liveRunning})
+    : runtimeMode === 'RECORDED' && recordedTrace
     ? new RecordedRuntimeEventSource(recordedTrace)
     : simulatedRuntimeSource;
   const runtimeSnapshot = runtimeSource.getSnapshot(activePipelineDef, currentTime, isRunning);
@@ -56,7 +63,7 @@ export default function App() {
 
   // Real-time execution clock driver
   useEffect(() => {
-    if (!isRunning) return;
+    if (!isRunning || runtimeMode === 'LIVE') return;
 
     const interval = setInterval(() => {
       setCurrentTime((prev) => {
@@ -111,6 +118,8 @@ export default function App() {
     setActiveWorkflowId(wfId);
     setRuntimeMode('SIMULATED');
     setRecordedTrace(null);
+    setLiveEvents([]);
+    setLiveRunning(false);
     const targetPipeline = STATIC_PIPELINES.find((p) => p.id === wfId);
     if (targetPipeline) {
       setCurrentTime(targetPipeline.defaultTimeSeconds || 1.0);
@@ -138,6 +147,14 @@ export default function App() {
     setIsRunning(false);
   };
 
+  const handleLiveEvent = (event: RuntimeEvent) => {
+    setLiveEvents(prev => [...prev,event]);
+    setLiveTime(Math.max(event.timestampOffset,0.001));
+    if (event.stageId) setSelectedStageId(event.stageId);
+  };
+  const handleLiveStart = () => { setRuntimeMode('LIVE'); setLiveEvents([]); setLiveTime(0); setLiveRunning(true); setIsRunning(false); setActiveWorkflowId('artwork-to-vector'); setSelectedStageId('intake'); setInjectedEvents([]); setIsInspectorOpen(true); };
+  const handleLiveFinish = (telemetry?: typeof liveTelemetry) => { setLiveRunning(false); if (telemetry) setLiveTelemetry(telemetry); };
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#F7F4EE] text-[#242628]">
       {/* 1. Left Sidebar */}
@@ -157,10 +174,10 @@ export default function App() {
         <TopNav
           activeTab={activeNavTab}
           onSelectTab={(tab) => { setActiveNavTab(tab); setUtilityPage(null); }}
-          isRunning={isRunning}
+          isRunning={runtimeMode === 'LIVE' ? liveRunning : isRunning}
           runtimeMode={runtimeMode}
-          onToggleRunning={handleToggleRunning}
-          onResetSimulation={handleResetSimulation}
+          onToggleRunning={runtimeMode === 'LIVE' ? () => {} : handleToggleRunning}
+          onResetSimulation={runtimeMode === 'LIVE' ? undefined : handleResetSimulation}
           onOpenMobileSidebar={() => setIsMobileSidebarOpen(true)}
         />
 
@@ -182,12 +199,13 @@ export default function App() {
           <main className="flex-1 flex flex-col lg:flex-row overflow-hidden p-4 sm:p-6 gap-6 min-w-0">
             {/* 3. Main Workflow Canvas */}
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#F7F4EE]">
+              <LiveRunPanel onStart={handleLiveStart} onEvent={handleLiveEvent} onFinish={handleLiveFinish} />
               <WorkflowCanvas
                 workflow={activeWorkflow}
                 selectedStageId={selectedStageId}
                 onSelectStage={handleSelectStage}
-                isRunningWorkflow={isRunning}
-                currentTime={currentTime}
+                isRunningWorkflow={runtimeMode === 'LIVE' ? liveRunning : isRunning}
+                currentTime={runtimeSnapshot.currentTimeSeconds}
                 pipes={derived.pipes}
                 runtimeMode={runtimeMode}
               />
@@ -198,7 +216,7 @@ export default function App() {
               <NodeInspector
                 stage={currentStage}
                 onClose={() => setIsInspectorOpen(false)}
-                isRunningWorkflow={isRunning}
+                isRunningWorkflow={runtimeMode === 'LIVE' ? liveRunning : isRunning}
                 workflowName={activeWorkflow.name}
                 workflowId={activeWorkflow.id}
                 allLogs={activeWorkflow.logs}
@@ -213,7 +231,7 @@ export default function App() {
         )}
 
         {!utilityPage && activeNavTab === 'Execution' && (
-          <ExecutionView workflow={activeWorkflow} currentTime={currentTime} telemetry={derived.telemetry} runtimeMode={runtimeMode} />
+          <ExecutionView workflow={activeWorkflow} currentTime={runtimeSnapshot.currentTimeSeconds} telemetry={derived.telemetry} runtimeMode={runtimeMode} />
         )}
 
         {!utilityPage && activeNavTab === 'Dependencies' && (

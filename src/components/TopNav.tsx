@@ -69,7 +69,7 @@ export const TopNav: React.FC<TopNavProps> = ({
             }`}
           />
           <span className="font-medium text-[#242628] hidden sm:inline">
-            {runtimeMode === 'RECORDED' ? (isRunning ? 'Recorded Replay' : 'Replay Paused') : (isRunning ? 'Simulation Running' : 'Simulation Paused')}
+            {runtimeMode === 'LIVE' ? (isRunning ? 'Backend Processing' : 'Live Run Finished') : runtimeMode === 'RECORDED' ? (isRunning ? 'Recorded Replay' : 'Replay Paused') : (isRunning ? 'Simulation Running' : 'Simulation Paused')}
           </span>
         </div>
 
@@ -87,13 +87,15 @@ export const TopNav: React.FC<TopNavProps> = ({
         {/* Primary Stop / Resume button */}
         <button
           onClick={onToggleRunning}
+          disabled={runtimeMode === 'LIVE'}
+          title={runtimeMode === 'LIVE' ? 'Live execution is controlled by the backend' : 'Pause or resume playback'}
           className={`flex items-center gap-2 px-3.5 py-1.5 rounded-md text-sm font-medium transition-all ${
             isRunning
               ? 'bg-[#242628] text-white hover:bg-[#343638] shadow-xs active:scale-98'
               : 'bg-[#F97316] text-white hover:bg-[#EA580C] shadow-xs active:scale-98'
           }`}
         >
-          {isRunning ? (
+          {runtimeMode === 'LIVE' ? (<span>Live</span>) : isRunning ? (
             <>
               <Square className="w-3.5 h-3.5 fill-current" />
               <span>Stop</span>
