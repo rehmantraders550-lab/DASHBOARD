@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/orvia.py": {
+      "excludeFiles": "{node_modules/**,dist/**,public/**,src/**,**/*.map,**/__pycache__/**,**/*.pyc,**/tests/**,**/test_*.py,.github/**,.aistudio/**,*.lock,*.md}"
+    }
+  }
+}
