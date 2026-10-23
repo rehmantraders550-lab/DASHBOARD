@@ -10,6 +10,7 @@ export const LiveRunPanel:React.FC<Props>=({onStart,onEvent,onFinish})=>{
   const [error,setError]=useState('');
   const [result,setResult]=useState<Output|null>(null);
   const [expanded,setExpanded]=useState(false);
+  const [route,setRoute]=useState<'semantic'|'hard'|'bounded'>('semantic');
   const fileToPng=async(f:File):Promise<string>=>{
     if(f.size>8*1024*1024)throw Error('Input must be no larger than 8 MB.');
     const bitmap=await createImageBitmap(f);
@@ -41,8 +42,10 @@ export const LiveRunPanel:React.FC<Props>=({onStart,onEvent,onFinish})=>{
     setBusy(true);setError('');setResult(null);onStart();
     try{
       const image=await fileToPng(file);
-      const response=await fetch('/api/run',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({image,filename:file.name})});
-      if(!response.ok){const problem=await response.json().catch(()=>({}));throw Error(problem.error||'Backend request failed: '+response.status);}
+      const pythonRoute=route!=='bounded';
+      const response=await fetch(pythonRoute?'/api/orvia':'/api/run',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({image,filename:file.name,mode:route})});
+      if(!response.ok){const problem=await response.json().catch(()=>({}));if(Array.isArray(problem.events))problem.events.forEach(onEvent);throw Error(problem.error||'Backend request failed: '+response.status);}
+      if(pythonRoute){const body=await response.json(); if(!Array.isArray(body.events)||!body.result?.svg)throw Error('Invalid ORVIA Python engine response');body.events.forEach(onEvent);setResult(body.result);onFinish(body.result.telemetry);return;}
       if(!response.body)throw Error('Streaming response unavailable.');
       const reader=response.body.getReader(),decoder=new TextDecoder();
       let buffer='',completed:Output|null=null;
@@ -69,13 +72,14 @@ export const LiveRunPanel:React.FC<Props>=({onStart,onEvent,onFinish})=>{
   return <section className="shrink-0 mx-4 mt-2 sm:mx-6 lg:mx-8 rounded-xl border border-[#E5E1DA] bg-white px-4 py-3 text-sm">
     <div className="flex items-center gap-3 flex-wrap">
       <button className="font-semibold text-[#242628] flex items-center gap-2" onClick={()=>setExpanded(!expanded)}><span className="h-2 w-2 bg-[#16A34A] rounded-full"/>Real ORVIA Compute <span className="text-xs text-[#737373]">{expanded?'−':'+'}</span></button>
-      <span className="text-[#737373] text-xs hidden sm:inline">Actual image → editable SVG / zero external API calls</span>
+      <span className="text-[#737373] text-xs hidden sm:inline">Original ORVIA Python vector engine / no paid API</span>
       {result&&<button className="ml-auto bg-[#F97316] text-white px-3 py-1.5 rounded-lg flex items-center gap-1" onClick={download}><Download className="w-4 h-4"/>Download SVG</button>}
     </div>
     {expanded&&<div className="flex flex-wrap items-center gap-3 pt-3 mt-3 border-t border-[#E5E1DA]">
       <label className="cursor-pointer border rounded-lg px-3 py-2 flex items-center gap-2"><Upload className="w-4 h-4"/> {file?file.name:'Choose PNG/JPG/WebP'}<input type="file" className="sr-only" accept="image/png,image/jpeg,image/webp" onChange={e=>setFile(e.target.files?.[0]||null)}/></label>
+      <label className="text-xs text-[#595C60]">Engine <select className="ml-2 border border-[#E5E1DA] rounded-lg px-2 py-2 bg-white" value={route} onChange={e=>setRoute(e.target.value as typeof route)}><option value="semantic">ORVIA Semantic</option><option value="hard">ORVIA Hard Vector</option><option value="bounded">Bounded Fallback</option></select></label>
       <button disabled={!file||busy} onClick={run} className="bg-[#242628] disabled:opacity-40 text-white px-4 py-2 rounded-lg flex items-center gap-2"><Play className="w-4 h-4"/>{busy?'Processing…':'Run Real Pipeline'}</button>
-      <span className="text-xs text-[#737373]">Bounded color-vector reconstruction; not full semantic Python engine or certified print output.</span>
+      <span className="text-xs text-[#737373]">Original Python routes use OpenCV; bounded fallback remains separate. No print-ready certification.</span>
     </div>}
     {error&&<p className="text-red-700 flex gap-2 items-center mt-2 text-xs" role="alert"><AlertCircle className="w-4 h-4"/>{error}</p>}
     {result&&expanded&&<p className="mt-2 text-xs text-[#737373]">Completed in {result.elapsedSeconds}s · {result.segments} SVG segments · {result.colors.length} palette colors · {result.engine} · artwork review required</p>}
